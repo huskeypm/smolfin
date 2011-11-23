@@ -10,6 +10,10 @@
 #
 from dolfin import *
 
+## VARIABLES 
+active_site_absorb = 0
+bulk_conc = 1.0
+
 ## Dirichlet Boundaries
 def define_activesite(mesh):
     coor = mesh.coordinates()
@@ -42,31 +46,110 @@ def bulk_boundary(x):
 
     return x[2] < (zbottom + DOLFIN_EPS)
 
+def active_site_marked(x):
+    # check for marker
+    marker = 0
+    return marker
+
+def bulk_boundary_marked(x):
+    # check for marker
+    marker = 0
+    return marker
+
+
 ## PDE terms
 
 # W = del_x Psi * q
 # rewrite, since needs to be exponentiated
-def smolforceterm(V,fileValues):
-    psi = Function(V,fileValues);
+def smolforceterm(V,psi):
     valence = Constant(2)
     beta = exp(-valence*psi)
 
 
-# Domain
-#mesh = SomeMesh()
-fileMesh  ="example/potential-0_mesh.xml.gz"
-fileValues="example/potential-0_values.xml.gz"
-mesh = Mesh(fileMesh);
+# given a point in xyz, computes electrostatic potential due to a sphere
+# psi(r) = Q/(4 * pi e e0 (1+kappa R)) 1/r exp(-kappa(r-R))
+def SpherePotential(x):
+  z = 2;
+  e = 1; # replace w real value 
+  Q = z * e;
+  ee0 = 1; # replace with real permitivities
+  kappa = 1; # replace w Debye length 
+  bigR = 1; # replace w sphere size 
+  pi = 3.14;
+
+  # assuming sphere is centered at 0,0,0
+  r = np.linalg.norm(x)
+
+  Expression = (4 * pi*ee0*(1+kappa*bigR))*1/r*exp(-kappa(r-R));
+  
+  value = Eval(expression)
+
+  return value 
+
+# load in APBS example, which has geometry and potential
+# but no boundary 
+def MeshNoBoundaryWPotential()
+  ## load data 
+  # coordinates
+  fileMesh  ="example/potential-0_mesh.xml.gz"
+  # electrostatic potential 
+  potential="example/potential-0_values.xml.gz"
+  mesh = Mesh(fileMesh);
+
+  ## define boundary 
+  define_activesite(mesh)
+  define_bulkboundary(mesh)
+
+  bc_active = DirichletBC(V, Constant(active_site_absorb), active_site)
+  bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary)
+
+  psi = Function(V,potential);
+
+  return mesh,psi
+
+
+def MeshWBoundaryNoPotential()
+  ## load data 
+  fileMesh = "example/p.pqr.output.all_mesh.xml.gz" 
+  mesh = Mesh(fileMesh)
+  # load markers 
+
+  ## define boundary 
+  bc_active = DirichletBC(V, Constant(active_site_absorb), active_site_marked)
+  bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary_marked)
+
+  ## compute potential 
+  psi = OperateOnAllCoordsinV(V,SpherePotential ) 
+ 
+  return mesh, psi
+
+## Domain
+# if loading from APBS
+apbs = 0
+gamer= 1
+if(apbs==1):
+  mesh,potential = MeshNoBoundaryWPotential()
+
+# sphere example 
+elif(gamer==1):
+
+else:
+  print "Dont understand"
+  quit()
+
+  # load in boundaries 
+
+  # assign '4' to Dirichlet outer boundary (i think) 
+  # assign '5' to reflective BC (verify)
+  # assign '1' to active site (verify)
+
+
+
 # Function space
 V = FunctionSpace(mesh, "CG", 1)
 
 
 # Boundaries
-define_activesite(mesh)
-define_bulkboundary(mesh)
-bulk_conc = 1.0
-bc_active = DirichletBC(V, Constant(0), active_site)
-bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary)
 
 bcs = [bc_active, bc_bulk]
 
@@ -76,7 +159,7 @@ bcs = [bc_active, bc_bulk]
 #psi.vector()[:] = 1.0 # WRONG WRONG WRONG 
 
 
-smolforceterm(V,fileValues)
+smolforceterm(V,psi)
 
 # The solution function
 u = Function(V)
