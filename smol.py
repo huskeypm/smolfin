@@ -47,11 +47,27 @@ def bulk_boundary(x):
     return x[2] < (zbottom + DOLFIN_EPS)
 
 def active_site_marked(x):
+  # load in boundaries 
+
+  # assign '4' to Dirichlet outer boundary (i think) 
+  # assign '5' to reflective BC (verify)
+  # assign '1' to active site (verify)
+
+
+
     # check for marker
     marker = 0
     return marker
 
 def bulk_boundary_marked(x):
+  # load in boundaries 
+
+  # assign '4' to Dirichlet outer boundary (i think) 
+  # assign '5' to reflective BC (verify)
+  # assign '1' to active site (verify)
+
+
+
     # check for marker
     marker = 0
     return marker
@@ -63,7 +79,9 @@ def bulk_boundary_marked(x):
 # rewrite, since needs to be exponentiated
 def smolforceterm(V,psi):
     valence = Constant(2)
-    beta = exp(-valence*psi)
+
+    pmf = valence * psi
+    dpmf = Gradient(pmf)
 
 
 # given a point in xyz, computes electrostatic potential due to a sphere
@@ -101,6 +119,7 @@ def MeshNoBoundaryWPotential()
   define_bulkboundary(mesh)
 
   bc_active = DirichletBC(V, Constant(active_site_absorb), active_site)
+  bc_molecule=NeumannBC(V,Constant(0),molecular_boundary)
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary)
 
   psi = Function(V,potential);
@@ -116,6 +135,7 @@ def MeshWBoundaryNoPotential()
 
   ## define boundary 
   bc_active = DirichletBC(V, Constant(active_site_absorb), active_site_marked)
+  bc_molecule=NeumannBC(V,Constant(0),molecular_boundary_marked)
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary_marked)
 
   ## compute potential 
@@ -128,30 +148,22 @@ def MeshWBoundaryNoPotential()
 apbs = 0
 gamer= 1
 if(apbs==1):
-  mesh,potential = MeshNoBoundaryWPotential()
+  mesh, psi = MeshNoBoundaryWPotential()
 
 # sphere example 
 elif(gamer==1):
+  mesh, psi = MeshWBoundaryNoPotential()
 
 else:
   print "Dont understand"
   quit()
-
-  # load in boundaries 
-
-  # assign '4' to Dirichlet outer boundary (i think) 
-  # assign '5' to reflective BC (verify)
-  # assign '1' to active site (verify)
-
-
 
 # Function space
 V = FunctionSpace(mesh, "CG", 1)
 
 
 # Boundaries
-
-bcs = [bc_active, bc_bulk]
+bcs = [bc_active, bc_molecule,bc_bulk]
 
 # The potential
 #psi = Function(V)
@@ -168,7 +180,11 @@ u = Function(V)
 v = TestFunction(V)
 
 # The form
+beta = 1 # can't remember what beta was for 
 F = beta*inner(grad(u), grad(v))*dx
+
+# add in PMF contribution (verify) 
+F = inner(pmf,grad(v))*dx   # i think this is wrong 
 
 # Solve the problem
 solve(F==0, u, bcs)
@@ -178,6 +194,11 @@ solve(F==0, u, bcs)
 up = project(beta*u)
 
 File("solution.pvd") << up
+
+
+# get kon 
+boundary_flux = assemble(u,boundary_bulk)  # verify, might need interior bondary 
+kon = boundary_flux / c0;
 
 plot(up, interactive=True)
 
