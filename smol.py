@@ -110,7 +110,7 @@ def bulk_boundary_marked(x):
 
 # PMF term in Smoluchowski equation
 # F = del W(r)
-# [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, “Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.,” Biophysical Journal, vol. 86, no. 4, pp. 2017–2029, Apr. 2004.
+# [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
 def SmolPMF(V,psi):
     valence = Constant(2)
 
@@ -120,7 +120,7 @@ def SmolPMF(V,psi):
     return pmf,dpmf
 
 def ComputeKon():
-    Jp = Expression("D * intfact * grad(invintfact * up)")
+    #Jp = Expression("D * intfact * grad(invintfact * up)")
 
     domain = MeshFunction("uint", mesh, 2)
 
@@ -161,7 +161,7 @@ def SpherePotential(x):
 
 # load in APBS example, which has geometry and potential
 # but no boundary
-def MeshNoBoundaryWPotential()
+def MeshNoBoundaryWPotential():
   ## load data
   # coordinates
   fileMesh  ="example/potential-0_mesh.xml.gz"
@@ -180,17 +180,18 @@ def MeshNoBoundaryWPotential()
   # SEE PG 199 of Fenics manual TODO
   # bc_molecule=NeumannBC(V,Constant(0),molecular_boundary)
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary)
+  bcs = [bc_active, bc_molecule,bc_bulk]
 
   # apply file values to fuction space
   psi = Function(V,potential);
 
-  return mesh,psi
+  return mesh,psi,bcs,V
 
 
 # boundary is given as input, here we compute potential (for sphere)
 # given input boundary. Note: normally youd want to use APBS to get
 # the electrostatic potential
-def MeshWBoundaryNoPotential()
+def MeshWBoundaryNoPotential():
   ## load data
   fileMesh = "example/p.pqr.output.all_mesh.xml.gz"
   mesh = Mesh(fileMesh)
@@ -204,7 +205,10 @@ def MeshWBoundaryNoPotential()
   bc_active = DirichletBC(V, Constant(active_site_absorb), active_site_marked)
   # SEE PG 199 of Fenics manual TODO
   #   bc_molecule=NeumannBC(V,Constant(0),molecular_boundary_marked)
+  bc_molecule=bc_active # WRONG WRONG WRONG 
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary_marked)
+  bcs = [bc_active, bc_molecule,bc_bulk]
+
 
   ## compute potential
   v= Function(V)
@@ -212,7 +216,7 @@ def MeshWBoundaryNoPotential()
   psi = v
   v.vector()[:]=0  # remove me
 
-  return mesh, psi
+  return mesh, psi,bcs,V
 
 def RestOfCode():
 
@@ -279,20 +283,17 @@ def RestOfCode():
 apbs = 0
 gamer= 1
 if(apbs==1):
-  mesh, psi = MeshNoBoundaryWPotential()
+  mesh, psi,bcs,V = MeshNoBoundaryWPotential()
 
 # sphere example
 elif(gamer==1):
-  mesh, psi = MeshWBoundaryNoPotential()
+  mesh, psi,bcs, V = MeshWBoundaryNoPotential()
 
 else:
   print "Dont understand"
   quit()
 
 
-
-# Boundaries
-bcs = [bc_active, bc_molecule,bc_bulk]
 
 
 RestOfCode()
