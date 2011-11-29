@@ -9,6 +9,7 @@
 #	2. Compute flux around boundary to get kon
 #
 from dolfin import *
+import numpy as np
 
 ## VARIABLES
 active_site_absorb = 0
@@ -31,7 +32,7 @@ def define_activesite(mesh):
     range=np.max(coor,axis=0) - np.min(coor,axis=0)
     xywidth = 0.5 * np.min(range) * 1/5.0;
 
-def define_bulkboundary(mesh)
+def define_bulkboundary(mesh):
     coor = mesh.coordinates()
 
     # find maximum of box and trace out small region
@@ -61,6 +62,7 @@ def active_site_marked(x):
   # temporary
   r = np.linalg.norm(x)
   isOnR = r < temp_innerR + DOLFIN_EPS
+  z = x[2]
   isOnSite = abs(z-temp_siteZ) < (2+ DOLFIN_EPS)
   return isOnR*isOnSite
 
@@ -115,6 +117,19 @@ def SmolPMF(V,psi):
     pmf = valence * psi
     dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
 
+    return pmf,dpmf
+
+def ComputeKon():
+    Jp = Expression("D * intfact * grad(invintfact * up)")
+
+    domain = MeshFunction("uint", mesh, 2)
+
+    #F = {}
+    # todo
+    #boundary_flux_terms  = assemble( Jp*ds,
+    #  exterior_facet_domains = domain)
+    #kon = boundary_flux_term / c0;
+
 
 # given a point in xyz, computes electrostatic potential due to a sphere
 # psi(r) = Q/(4 * pi e e0 (1+kappa R)) 1/r exp(-kappa(r-R))
@@ -122,16 +137,23 @@ def SmolPMF(V,psi):
 def SpherePotential(x):
   z = 2;
   e = 1; # replace w real value
-  Q = z * e;
-  ee0 = 1; # replace with real permitivities
-  kappa = 1; # replace w Debye length
-  bigR = 1; # replace w sphere size
-  pi = 3.14;
+#  Q = z * e;
+#  ee0 = 1; # replace with real permitivities
+#  kappa = 1; # replace w Debye length
+#  bigR = 1; # replace w sphere size
+#  pi = 3.14;
 
   # assuming sphere is centered at 0,0,0
   r = np.linalg.norm(x)
 
-  h = Expression(4 * pi*ee0*(1+kappa*bigR))*1/r*exp(-kappa(r-R),r=0.0);
+  h = Expression("Q / (4 * pi*ee0*(1+kappa*bigR))*1/r*exp(-kappa*(r-bigR))",
+                 Q = z*e,
+                 pi = 3.14,# use actual val
+                 ee0 = 1,  # replace with real permitivities
+                 kappa = 1, # replace w Debye length
+                 bigR = 1,   # replace w sphere size
+                 r=1.0      # dummy val for now
+                 );
   h.r = r;
   # PKH - how do i return value
 
@@ -147,12 +169,16 @@ def MeshNoBoundaryWPotential()
   potential="example/potential-0_values.xml.gz"
   mesh = Mesh(fileMesh);
 
+  # Function space
+  V = FunctionSpace(mesh, "CG", 1)
+
   ## define boundary
   define_activesite(mesh)
   define_bulkboundary(mesh)
 
   bc_active = DirichletBC(V, Constant(active_site_absorb), active_site)
-  bc_molecule=NeumannBC(V,Constant(0),molecular_boundary)
+  # SEE PG 199 of Fenics manual TODO
+  # bc_molecule=NeumannBC(V,Constant(0),molecular_boundary)
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary)
 
   # apply file values to fuction space
@@ -168,18 +194,73 @@ def MeshWBoundaryNoPotential()
   ## load data
   fileMesh = "example/p.pqr.output.all_mesh.xml.gz"
   mesh = Mesh(fileMesh)
+
+  # Function space
+  V = FunctionSpace(mesh, "CG", 1)
+
   # load markers
 
   ## define boundary
   bc_active = DirichletBC(V, Constant(active_site_absorb), active_site_marked)
-  bc_molecule=NeumannBC(V,Constant(0),molecular_boundary_marked)
+  # SEE PG 199 of Fenics manual TODO
+  #   bc_molecule=NeumannBC(V,Constant(0),molecular_boundary_marked)
   bc_bulk = DirichletBC(V, Constant(bulk_conc), bulk_boundary_marked)
 
   ## compute potential
   v= Function(V)
-  psi = SpherePotential(v)
+  # TODO psi = SpherePotential(v)
+  psi = v
+  v.vector()[:]=0  # remove me
 
   return mesh, psi
+
+def RestOfCode():
+
+    # Compute W, dW from psi
+    pmf,dpmf = SmolPMF(V,psi)
+
+    # The solution function
+    u = Function(V)
+
+    # Test function
+    v = TestFunction(V)
+
+    # The diffusion part of PDE
+    # Recasting as integration factor (see Eqn (5) in Notes)
+    beta = 1/0.693 # 1/kT, kcal/mol
+    intfact = exp(- beta * pmf)
+    invintfact = 1/intfact;
+    # Create weak-form integrand (see eqn (6) in NOtes)
+    # also refer ti Zhou eqn 2,3 uin 2011
+    # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
+    # form of the PDE
+    D = 1.0 # diffusion constant
+    #  (no time dependence,so only consider del u del v term)
+    F = D * intfact*inner(grad(u), grad(v))*dx
+
+
+    # Solve the problem
+    solve(F==0, u, bcs)
+
+    # Project the solution
+    # Return projection of given expression *v* onto the finite element space *V*
+    # Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
+    up = project(intfact*u)
+
+    File("solution.pvd") << up
+    plot(up, interactive=True)
+
+
+    ## get kon
+    # See eqn (4) of Notes
+    # following example on pg 619
+    #boundary_flux = assemble( inner(surf_normal,Jp) ,boundary_bulk)  # verify, might need interior bondary
+    ComputeKon()
+
+    # if sphere, validate against analytical result (see 111128_todo)
+
+
+
 
 ## Domain
 
@@ -208,58 +289,10 @@ else:
   print "Dont understand"
   quit()
 
-# Function space
-V = FunctionSpace(mesh, "CG", 1)
 
 
 # Boundaries
 bcs = [bc_active, bc_molecule,bc_bulk]
 
-# Compute W, dW from psi
-SmolPMF(V,psi)
 
-# The solution function
-u = Function(V)
-
-# Test function
-v = TestFunction(V)
-
-# The diffusion part of PDE
-# Recasting as integration factor (see Eqn (5) in Notes)
-beta = 1/0.693 # 1/kT, kcal/mol
-intfact = exp(- beta * pmf)
-invintfact = 1/intfact;
-# Create weak-form integrand (see eqn (6) in NOtes)
-# also refer ti Zhou eqn 2,3 uin 2011
-# NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
-# form of the PDE
-D = 1.0 # diffusion constant
-#  (no time dependence,so only consider del u del v term)
-F = D * intfact*inner(grad(u), grad(v))*dx
-
-
-# Solve the problem
-solve(F==0, u, bcs)
-
-# Project the solution
-# Return projection of given expression *v* onto the finite element space *V*
-# Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
-up = project(intfact*u)
-
-File("solution.pvd") << up
-plot(up, interactive=True)
-
-
-## get kon
-# See eqn (4) of Notes
-# following example on pg 619
-#boundary_flux = assemble( inner(surf_normal,Jp) ,boundary_bulk)  # verify, might need interior bondary
-Jp = Expression(D * intfact * grad(invintfact * up) )
-domain = MeshFunction("uint", mesh, 2)
-boundary_flux_term  = assemble( Jp*ds, exterior_facet_domains = domain)
-kon = boundary_flux_term / c0;
-
-# if sphere, validate against analytical result (see 111128_todo)
-
-
-
+RestOfCode()
