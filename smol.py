@@ -135,26 +135,48 @@ def SmolPMF(V,psi):
 
     return pmf #,dpmf
 
+
+# This works
+def Test():
+
+    mesh = UnitCube(32,32,32)
+
+    # Function space
+    V = FunctionSpace(mesh, "CG", 1)
+
+    # The potential
+    psi = Function(V)
+    psi.vector()[:] = 1.0 # WRONG WRONG WRONG 
+
+    Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
+    # Need to know the spatial dimension to compute the shape of derivatives.
+    D = 1 
+    Jp = project(D*grad(psi),Vv)
+ 
+
+
+
 ## get kon
 # See eqn (4) of Notes
 # following example on pg 619
 # if sphere, validate against analytical result (see 111128_todo)
-def ComputeKon(intfact,invintfact,up,V):
+def ComputeKon(mesh,intfact,invintfact,up,V):
     c0 = bulk_conc;
  
-    # ERROR: ufl.log.UFLException: Shape mismatch.
-    # grad term is not  working, but it seems like its output should be the same size as input arguments?
-    #Jp = project(D * intfact * grad(invintfact * up),V)
-    Jp = project(D * intfact * (invintfact * up),V)
+    # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
+    Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
+    # Need to know the spatial dimension to compute the shape of derivatives.
+    # PKH - something about invintfact is incompataible with 'up'
+    Jp = project(D * intfact * grad(invintfact * up),Vv)
 
     subdomains = MeshFunction("uint", mesh, 2) # I called this earlier, ok to do again?
 
 
-    # ERROR: ufl.log.UFLException: Dot product requires non-scalar arguments, got arguments with ranks 0 and 1.
+    # SOLVED: ERROR: ufl.log.UFLException: Dot product requires non-scalar arguments, got arguments with ranks 0 and 1.
     # ???
     #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
-    n = FacetNormal(mesh)
-    boundary_flux_terms = assemble(dot(Jp, n)*ds(outer_boundary_marker),
+    #n = FacetNormal(mesh)
+    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
                                 exterior_facet_domains = subdomains)
     kon = boundary_flux_term / c0;
 
@@ -173,7 +195,7 @@ def GetPotential():
   meshGamer; 
   V ; # meshGamer's functionspace  
 
-  #PKH  interpolate values onto my mesh?
+  #PKH  APBS mesh differs from Gamer mesh, therefore need to interpolate APBS values onto Gamer mesh.
   # maybe do this: http://stackoverflow.com/questions/7701669/interpolate-large-irregular-grid-onto-another-irregular-grid-in-python
   v = scipy.interpolate(meshAPBS,valuesAPBS,meshGamer,V)
   
@@ -246,7 +268,7 @@ def MeshNoBoundaryWPotential():
 def MeshWBoundaryNoPotential():
 
   ## load data
-  fileMesh = "example/p.pqr.output.all_mesh.xml.gz"
+  fileMesh = "p.pqr.output.all_mesh.xml.gz"
   mesh = Mesh(fileMesh)
 
   # Function space
@@ -257,12 +279,13 @@ def MeshWBoundaryNoPotential():
   # Need to pull these from Gamer output at some point 
 
   ## define Dirichlet boundary
+  # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
   bc_active = DirichletBC(V, Constant(active_site_absorb), DirichletActiveSite())
   bc_bulk = DirichletBC(V, Constant(bulk_conc), DirichletBulkBoundary())
   bcs = [bc_active, bc_bulk]
 
   ## Define Neumann boundary
-  # PKH: not sure if this is right (added to PDE later) 
+  # PKH: Verify that Neumann BC is implemented correctly
   subdomains = MeshFunction("uint",mesh,2)
   subdomain = NeumannMolecularBoundary()
   subdomain.mark(subdomains,molecular_boundary_marker)
@@ -277,7 +300,7 @@ def MeshWBoundaryNoPotential():
 
   ## compute potential
   else:
-    # PKH best way of doing this? 
+    # PKH Is this the best way of computing Sphere potential over mesh coordinates? 
     x = mesh.coordinates() 
     psi = interpolate(SpherePotential(x),V)
     # PKH: I need to check potential, since code x-plodes 
@@ -285,7 +308,7 @@ def MeshWBoundaryNoPotential():
 
   return mesh, psi,bcs,V
 
-def PDEPart():
+def PDEPart(mesh,psi,bcs,V):
 
     # Compute W, dW from psi
     pmf = SmolPMF(V,psi)
@@ -313,8 +336,7 @@ def PDEPart():
     f_molecular_boundary = Constant(0) # or some function...
 
     # PKH - check w Fenics example, since it seems like ds() no longer needed?
-    # it seems like I already marked the subdomain, so this shouldnt be
-    # needed. That said, I need to see how to apply this f_mol. function
+    # (because I already marked the subdomain)
     F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
 
@@ -330,7 +352,7 @@ def PDEPart():
     File("solution.pvd") << up
     #plot(up, interactive=True)
  
-    return intfact,invintfact,up,V
+    return intfact,invintfact,up
 
 ## Domain
 
@@ -345,25 +367,37 @@ def PDEPart():
 #
 
 
-# if loading from APBS
-apbs = 0
-gamer= 1
-if(0):
-  1
-## NOT SUPPORTED YET 
-##if(apbs==1):
-##  mesh, psi,bcs,V = MeshNoBoundaryWPotential()
+if __name__ == "__main__":
 
-# sphere example
-elif(gamer==1):
-  mesh, psi,bcs, V = MeshWBoundaryNoPotential()
+  # if loading from APBS
+  apbs = 0
+  gamer= 1
+  test = 0
+  if 0:
+    1
+  ## NOT SUPPORTED YET 
+  ##if(apbs==1):
+  ##  mesh, psi,bcs,V = MeshNoBoundaryWPotential()
 
-else:
-  print "Dont understand"
-  quit()
+  # sphere example
+  elif(gamer==1):
+    mesh, psi,bcs, V = MeshWBoundaryNoPotential()
+ 
+  elif(test==1):
+    # ignore me for testing PKH
+    Test()
+    quit()
+
+  else:
+    print "Bug Pete to write usable code. You request dumbfounded me"
+    quit()
 
 
 
+  # solve PDE
+  intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
 
-intfact,invintfact,up,V = PDEPart()
-ComputeKon(intfact,invintfact,up,V) 
+  # compute something
+  ComputeKon(mesh,intfact,invintfact,up,V) 
+
+
