@@ -93,8 +93,7 @@ def write_dolfin_files(filename, mesh, u):
     from dolfin import File
     
     File(filename+"_mesh.xml.gz") << mesh
-    # can't store this just yet
-    #File(filename+"_markers.xml.gz") << u
+    File(filename+"_markers.xml.gz") << u
     
 
 if __name__ == "__main__":
@@ -108,8 +107,7 @@ if __name__ == "__main__":
     mesh = generate_dolfin_mesh(coordinates, cells)
     # can't store this just yet 
     #values = generate_dolfin_function(mesh, markers)
-    values=markers # PKH temporary 
-    write_dolfin_files(filename.replace(".m", ""), mesh, values)
+    write_dolfin_files(filename.replace(".m", ""), mesh, markers)
     
 #mcsffile = "p.pqr.output.all.m"
 #coordinates,cells, markers = read_mcsf(mcsffile)

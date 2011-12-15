@@ -99,6 +99,15 @@ def write_dolfin_files(filename, mesh, u):
     
     File(filename+"_mesh.xml.gz") << mesh
     File(filename+"_values.xml.gz") << u
+
+def interpolate_to_grid(coordinates, values):
+    import numpy 
+    from scipy.interpolate import griddata
+
+    z = numpy.zeros((2,3))
+    z[0,:]=(4,21,23)
+
+    line = griddata(coordinates, values, (z),method='linear')
     
 
 if __name__ == "__main__":
@@ -110,4 +119,9 @@ if __name__ == "__main__":
     mesh = generate_dolfin_mesh(coordinates, cells)
     values = generate_dolfin_function(mesh, values)
     write_dolfin_files(filename.replace(".dx", ""), mesh, values)
+
+    # attempting interpolation here 
+    # filename = "example/molecule/potential-0.dx"
+ 
+
     
