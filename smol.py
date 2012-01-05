@@ -10,7 +10,9 @@
 #
 from dolfin import *
 import numpy as np
-
+import Sphere
+import MoleculeBoundaries
+ 
 ## VARIABLES
 active_site_absorb = 0
 bulk_conc = 1.0
@@ -27,97 +29,9 @@ outer_boundary_marker = 4 # verify
 molecular_boundary_marker = 5 # verify 
 
 
-## Dirichlet Boundaries
-def define_activesite(mesh):
-    coor = mesh.coordinates()
-
-    # find maximum of box and trace out small region
-    ztop = np.max(coor[:,2])
-
-    midpoint = np.mean(coor,axis=0)
-    xymidpoint = midpoint[0:2]
-    range=np.max(coor,axis=0) - np.min(coor,axis=0)
-    xywidth = 0.5 * np.min(range) * 1/5.0;
-
-def define_bulkboundary(mesh):
-    coor = mesh.coordinates()
-
-    # find maximum of box and trace out small region
-    zbottom = np.min(coor[:,2])
+## Dirichlet Boundaries (loaded separately now)
 
 
-# assuming active site is a small radius at top of boundary
-def active_site(x):
-
-    xydist = np.linalg.norm(xymidpoint-x[0:2])
-    isInXY = xydist < xywidth
-    isInZ  = x[2] > (ztop - DOLFIN_EPS)
-
-    return isInXY * isInZ
-
-def bulk_boundary(x):
-
-    return x[2] < (zbottom + DOLFIN_EPS)
-
-#def active_site_marked(x):
-class DirichletActiveSite(SubDomain):
-  def inside(self,x,on_boundary):
-    # load in boundaries
-
-    # assign '4' to Dirichlet outer boundary (i think)
-    # assign '5' to reflective BC (verify)
-    # assign '1' to active site (verify)
-
-    # temporary
-    r = np.linalg.norm(x)
-    isOnR = r < temp_innerR + DOLFIN_EPS
-    z = x[2]
-    isOnSite = abs(z-temp_siteZ) < (2+ DOLFIN_EPS)
-    return isOnR*isOnSite
-  
-    # check for marker
-    #marker = 0
-    #return marker
-
-class DirichletBulkBoundary(SubDomain):
-  def inside(self,x,on_boundary):
-    # load in boundaries
-
-    # assign '4' to Dirichlet outer boundary (i think)
-    # assign '5' to reflective BC (verify)
-    # assign '1' to active site (verify)
-
-    r = np.linalg.norm(x)
-    isOnOuterR = r > temp_outerR - DOLFIN_EPS
-    return isOnOuterR
-
-  
-    # check for marker
-    #marker = 0
-    #return marker
-
-
-class NeumannMolecularBoundary(SubDomain):
-  def inside(self,x,on_boundary):
-
-    # load in boundaries
-  
-    # assign '4' to Dirichlet outer boundary (i think)
-    # assign '5' to reflective BC (verify)
-    # assign '1' to active site (verify)
-  
-    # temporary
-    r = np.linalg.norm(x)
-    isOnR = r < temp_innerR + DOLFIN_EPS
-    z = x[2]
-    isNotOnSite = abs(z-temp_siteZ) > (2+ DOLFIN_EPS)
-    return isOnR*isNotOnSite
-  
-  
-  
-    # check for marker
-    #marker = 0
-    #return marker
 
 
 ## PDE terms
@@ -178,7 +92,7 @@ def ComputeKon(mesh,intfact,invintfact,up,V):
     #n = FacetNormal(mesh)
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
                                 exterior_facet_domains = subdomains)
-    kon = boundary_flux_term / c0;
+    kon = boundary_flux_terms / c0;
 
     print "My kon is %f" % (kon)
 
@@ -202,41 +116,20 @@ def GetPotential():
 
   1
 
-# given a point in xyz, computes electrostatic potential due to a sphere
-# psi(r) = Q/(4 * pi e e0 (1+kappa R)) 1/r exp(-kappa(r-R))
-# See equations (1) and (2) on pg 3 in Notetaker 2011-11-10
-def SpherePotential(x):
-  z = 2;
-  e = 1; # replace w real value
-  Q = z * e;
-  ee = 1; # ee0, replace with real permitivities
-  kappa = 1; # replace w Debye length
-  bigR = 1; # replace w sphere size
-  pi = 3.14;
-
-  # assuming sphere is centered at 0,0,0
-  r0 = np.linalg.norm(x)
-
-  h = Expression("Q / (4 * pi * ee * (1 + kappa * bigR)) * 1/r * exp(-kappa * (r-bigR))",
-                 Q = Q,   
-                 pi = pi,
-                 ee = ee, 
-                 kappa = kappa,
-                 bigR = bigR,  
-                 r=r0       
-                 );
-
-  return h
 
 # load in APBS example, which has geometry and potential
 # but no boundary
-def MeshNoBoundaryWPotential():
+def MeshWPotential():
   ## load data
   # coordinates
-  fileMesh  ="example/potential-0_mesh.xml.gz"
-  # electrostatic potential
-  potential="example/potential-0_values.xml.gz"
+  # was fileMesh  ="example/molecule/potential-0_mesh.xml.gz"
+  fileMesh  ="example/molecule/p.pqr.output.out.mesh.xml.gz"
   mesh = Mesh(fileMesh);
+
+  # electrostatic potential
+  # was potential="example/molecule/potential-0_values.xml.gz"
+  filePotential="example/molecule/p.pqr.output.out.values.xml.gz"
+
 
   # Function space
   V = FunctionSpace(mesh, "CG", 1)
@@ -245,8 +138,8 @@ def MeshNoBoundaryWPotential():
   define_activesite(mesh)
   define_bulkboundary(mesh)
 
-  bc_active = DirichletBC(V, Constant(active_site_absorb), DirichletActiveSite())
-  bc_bulk = DirichletBC(V, Constant(bulk_conc), DirichletBulkBoundary())
+  bc_active = DirichletBC(V, Constant(active_site_absorb), MoleculeBoundaries.DirichletActiveSite())
+  bc_bulk = DirichletBC(V, Constant(bulk_conc), MoleculeBoundaries.DirichletBulkBoundary())
   # Neumann done later 
   bcs = [bc_active, bc_bulk]
   
@@ -265,34 +158,48 @@ def MeshNoBoundaryWPotential():
 # boundary is given as input, here we compute potential (for sphere)
 # given input boundary. Note: normally youd want to use APBS to get
 # the electrostatic potential
-def MeshWBoundaryNoPotential():
+def MeshNoPotential(debug=0):
 
   ## load data
-  fileMesh = "p.pqr.output.all_mesh.xml.gz"
+  # data from ~/localTemp/NBCR/smol/born_ex
+  fileMesh = "example/sphere/p.pqr.output.all_mesh.xml.gz"
   mesh = Mesh(fileMesh)
+  
 
   # Function space
   V = FunctionSpace(mesh, "CG", 1)
 
 
   ## load markers
+  useMarkers=1
   # Need to pull these from Gamer output at some point 
 
   ## define Dirichlet boundary
-  # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
-  bc_active = DirichletBC(V, Constant(active_site_absorb), DirichletActiveSite())
-  bc_bulk = DirichletBC(V, Constant(bulk_conc), DirichletBulkBoundary())
-  bcs = [bc_active, bc_bulk]
+  if(useMarkers==1):
+    1
+  else:
+    # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
+    bc_active = DirichletBC(V, Constant(active_site_absorb), Sphere.DirichletActiveSite())
+    bc_bulk = DirichletBC(V, Constant(bulk_conc), Sphere.DirichletBulkBoundary())
+    
+    bcs = [bc_active, bc_bulk]
+
+  if(debug==0):
+      return mesh
 
   ## Define Neumann boundary
-  # PKH: Verify that Neumann BC is implemented correctly
-  subdomains = MeshFunction("uint",mesh,2)
-  subdomain = NeumannMolecularBoundary()
-  subdomain.mark(subdomains,molecular_boundary_marker)
+  if(useMarkers==1):
+    1
+  else:      
+    # PKH: Verify that Neumann BC is implemented correctly
+    subdomains = MeshFunction("uint",mesh,2)
+    subdomain = Sphere.NeumannMolecularBoundary()
+    subdomain.mark(subdomains,molecular_boundary_marker)
 
-  # PKH: do I need to mark BulkBoundary as well in order to use assemble call later?
-  subdomainOuter = DirichletBulkBoundary()
-  subdomainOuter.mark(subdomains,outer_boundary_marker)
+    # PKH: do I need to mark BulkBoundary as well in order to use assemble call later?
+    # NOTE: is this for sure where I should be computing kon? Seems like the flux along this boundary s.b. zero!
+    subdomainOuter = Sphere.DirichletBulkBoundary()
+    subdomainOuter.mark(subdomains,outer_boundary_marker)
 
   haveAPBS=0
   if(haveAPBS):
@@ -302,7 +209,7 @@ def MeshWBoundaryNoPotential():
   else:
     # PKH Is this the best way of computing Sphere potential over mesh coordinates? 
     x = mesh.coordinates() 
-    psi = interpolate(SpherePotential(x),V)
+    psi = interpolate(Sphere.Potential(x),V)
     # PKH: I need to check potential, since code x-plodes 
     psi.vector()[:]=0;
 
@@ -337,6 +244,7 @@ def PDEPart(mesh,psi,bcs,V):
 
     # PKH - check w Fenics example, since it seems like ds() no longer needed?
     # (because I already marked the subdomain)
+    # PKH where is 'subdomain' used that I defined earlier? 
     F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
 
@@ -355,6 +263,27 @@ def PDEPart(mesh,psi,bcs,V):
     return intfact,invintfact,up
 
 ## Domain
+
+
+def SimpleTest():
+  fileMesh = "example/sphere/p.pqr.output.all_mesh.xml.gz"
+  mesh = Mesh(fileMesh)
+  V = FunctionSpace(mesh, "CG", 1)
+
+  #bc_test = DirichletBC(V, Constant(2), DirichletActiveSite())
+  #bc_test = DirichletBC(V, Constant(2), DirichletBulkBoundary())
+  bc_test = DirichletBC(V, Constant(2), Sphere.NeumannMolecularBoundary())
+  
+  marked = Function(V)
+  bc_test.apply(marked.vector())
+
+  #plot(u, interactive=TRUE)
+  plot(marked, interactive=1)
+  interactive()
+
+  File("marked.pvd") << marked
+  
+  return mesh
 
 #
 # PDE
@@ -376,12 +305,12 @@ if __name__ == "__main__":
   if 0:
     1
   ## NOT SUPPORTED YET 
-  ##if(apbs==1):
-  ##  mesh, psi,bcs,V = MeshNoBoundaryWPotential()
+  if(apbs==1):
+    mesh, psi,bcs,V = MeshWPotential()
 
   # sphere example
   elif(gamer==1):
-    mesh, psi,bcs, V = MeshWBoundaryNoPotential()
+    mesh, psi,bcs, V = MeshNoPotential()
  
   elif(test==1):
     # ignore me for testing PKH
@@ -398,6 +327,6 @@ if __name__ == "__main__":
   intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
 
   # compute something
-  ComputeKon(mesh,intfact,invintfact,up,V) 
+  kon = ComputeKon(mesh,intfact,invintfact,up,V) 
 
 
