@@ -11,29 +11,10 @@
 from dolfin import *
 import numpy as np
 import Sphere
-import MoleculeBoundaries
+#import Molecule
+from params import *
+from view import *
  
-## VARIABLES
-active_site_absorb = 0
-bulk_conc = 1.0
-D = 1.0 # diffusion constant
-
-# temporary
-temp_outerR = 5.0
-temp_innerR = 1.0
-temp_siteZ  = 0.0
-
-
-# markers
-outer_boundary_marker = 4 # verify 
-molecular_boundary_marker = 5 # verify 
-
-
-## Dirichlet Boundaries (loaded separately now)
-
-
-
-
 ## PDE terms
 
 # PMF term in Smoluchowski equation
@@ -116,38 +97,36 @@ def GetPotential():
 
   1
 
-
 # load in APBS example, which has geometry and potential
 # but no boundary
 def MeshWPotential():
   ## load data
   # coordinates
   # was fileMesh  ="example/molecule/potential-0_mesh.xml.gz"
-  fileMesh  ="example/molecule/p.pqr.output.out.mesh.xml.gz"
+  #fileMesh  ="example/molecule/p.pqr.output.out.mesh.xml.gz"
+  fileMesh  ="example/molecule/p.pqr.output.out_mesh.xml.gz"
   mesh = Mesh(fileMesh);
 
   # electrostatic potential
   # was potential="example/molecule/potential-0_values.xml.gz"
-  filePotential="example/molecule/p.pqr.output.out.values.xml.gz"
-
+  filePotential="example/molecule/p.pqr.output.out_values.xml.gz"
 
   # Function space
   V = FunctionSpace(mesh, "CG", 1)
 
-  ## define boundary
-  define_activesite(mesh)
-  define_bulkboundary(mesh)
-
-  bc_active = DirichletBC(V, Constant(active_site_absorb), MoleculeBoundaries.DirichletActiveSite())
-  bc_bulk = DirichletBC(V, Constant(bulk_conc), MoleculeBoundaries.DirichletBulkBoundary())
-  # Neumann done later 
-  bcs = [bc_active, bc_bulk]
-  
-  print "need to add subdomain for neuman marker"
+  # load subdomains 
+  fileSubdomains="example/molecule/p.pqr.output.out_subdomains.xml.gz"
+  subdomains = MeshFunction("uint", mesh, fileSubdomains) 
+  bc0 = DirichletBC(V,Constant(active_site_absorb),subdomains,active_site_marker)
+  bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
+  bcs = [bc0,bc1]
+  PrintBoundary(mesh,bc0) 
+  PrintBoundary(mesh,bc1) 
   quit()
 
   # apply file values to fuction space
-  psi = Function(V,potential);
+  psi = Function(V,filePotential);
+  psi.vector()[:]=0;
 
   # alternatively I need to interpolate the grid from APBS 
   # see email from Johand around 1128
@@ -175,8 +154,9 @@ def MeshNoPotential(debug=0):
   # Need to pull these from Gamer output at some point 
 
   ## define Dirichlet boundary
+  bcs=1
   if(useMarkers==1):
-    1
+    bcs=1
   else:
     # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
     bc_active = DirichletBC(V, Constant(active_site_absorb), Sphere.DirichletActiveSite())
@@ -273,15 +253,10 @@ def SimpleTest():
   #bc_test = DirichletBC(V, Constant(2), DirichletActiveSite())
   #bc_test = DirichletBC(V, Constant(2), DirichletBulkBoundary())
   bc_test = DirichletBC(V, Constant(2), Sphere.NeumannMolecularBoundary())
+
   
-  marked = Function(V)
-  bc_test.apply(marked.vector())
-
-  #plot(u, interactive=TRUE)
-  plot(marked, interactive=1)
-  interactive()
-
-  File("marked.pvd") << marked
+  from view import PrintBoundary   
+  PrintBoundary(mesh,bc_test)
   
   return mesh
 
@@ -299,8 +274,8 @@ def SimpleTest():
 if __name__ == "__main__":
 
   # if loading from APBS
-  apbs = 0
-  gamer= 1
+  apbs =1
+  gamer= 0
   test = 0
   if 0:
     1
@@ -325,6 +300,9 @@ if __name__ == "__main__":
 
   # solve PDE
   intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
+  
+  # print solution
+  File("up.pvd") << up
 
   # compute something
   kon = ComputeKon(mesh,intfact,invintfact,up,V) 
