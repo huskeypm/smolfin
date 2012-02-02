@@ -2,46 +2,33 @@
 import numpy as np
 from params import *
 
-def mark_neumann_facets(mesh,cellmarkers):
+def mark_neumann_facets(mesh, cellmarkers):
     #from dolfin import cells, facets,mesh
-    from dolfin import cells,facets  
+    from dolfin import cells, facets, MeshFunction, File
     md = mesh.domains()
     facet_markers = md.markers(2)
     
     # 2 for top dim 2 (facets)
-    # do this??? facet_markers.set_all(0)
-    j=0
-    for cell in cells(mesh):
+    for j, cell in enumerate(cells(mesh)):
        for i, face in enumerate(facets(cell)):
-           # find out if the local facet i has a marker, if so add marker for this facet to facet_markers.
            marker = int(cellmarkers[j,i])
-           #print "%d %d %d" % (marker, j,i)
-           if(marker==molecular_boundary_marker):
-             facet_markers.set_value(cell.index(), i,
-                                     marker)
+           facet_markers.set_value(cell.index(), i, marker)
 
-       j=j+1
+    subdomains = MeshFunction("uint", mesh, facet_markers)
+    print "Num faces at active_site_marker:", \
+          (subdomains.array()==active_site_marker).sum()
 
-
-    # 
-    #print "Check that j=%d equals number of cells we loaded?" % j
-
-def mark_dirichlet_vertices(mesh,vertmarkers):
-  from dolfin import VertexFunction, vertices
-  # Dirichlet 
-
-  #markers = MeshFunction("uint", vertexMarkersFile)
-  boundary_markers = VertexFunction("uint",mesh)  
-  boundary_markers.set_all(0)
-  meshvertices = vertices(mesh)
-  #for i in np.size(meshvertices):
-  for i,vertex in enumerate(vertices(mesh)):
-     #HOPEFULLY they are in the same order as they were written in the file. Need to check
-      marker = int(vertmarkers[i])
-      if(marker == active_site_marker  or marker ==outer_boundary_marker): # dirichlet condition 
-        boundary_markers[i] = marker
-
+    File("subdomains.pvd") << subdomains
     
+    return subdomains
+
+def mark_dirichlet_vertices(mesh, vertmarkers):
+  from dolfin import VertexFunction
+
+  # This function is not needed, but you can do everything by:
+  boundary_markers = VertexFunction("uint", mesh)  
+  boundary_markers.set_all(0)
+  boundary_markers.array()[:] = vertmarkers
 
 def read_mcsf_file(filename):
   lines    =open(filename).readlines()
@@ -128,7 +115,7 @@ def read_mcsf_file(filename):
   #print cells
   
   # return data 
-  return coordinates, cells,cellmarkers,vertexmarkers
+  return coordinates, cells, cellmarkers, vertexmarkers
 
 def generate_dolfin_mesh(coordinates, cells):
     from dolfin import Mesh, MeshEditor
@@ -161,52 +148,78 @@ def generate_dolfin_mesh(coordinates, cells):
 
 def write_dolfin_files(filename, mesh):      
     from dolfin import File,MeshFunction
-    
+
+    print "Filename:", filename
+    print "mesh:", mesh.num_vertices(), mesh.num_cells()
     File(filename+"_mesh.xml.gz") << mesh
     #File(filename+"_cellmarkers.xml.gz") << u
     #File(filename+"_vertmarkers.xml.gz") << uv
 
     # write subdomains
-    sub_domains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
+    #sub_domains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
+    sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
     File(filename+"_subdomains.xml.gz") << sub_domains
 
 
 
 def read_and_mark(filename):
-    coordinates, cells, cellmarkers,vertmarkers= read_mcsf_file(filename)
+    coordinates, cells, cellmarkers, vertmarkers = read_mcsf_file(filename)
 
     ## 
     mesh = generate_dolfin_mesh(coordinates, cells)
     #print mesh
     
     # generate neumann/dirichlet here
-    mark_neumann_facets(mesh,cellmarkers)
-    mark_dirichlet_vertices(mesh,vertmarkers)
+    subdomains = mark_neumann_facets(mesh, cellmarkers)
+    #mark_dirichlet_vertices(mesh, vertmarkers)
 
     # TEST!!      
-    from dolfin import MeshFunction,DirichletBC,Constant,FunctionSpace
+    from dolfin import MeshFunction, DirichletBC, Constant, FunctionSpace
     V = FunctionSpace(mesh, "CG", 1)
-    subdomains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
-    bc0 = DirichletBC(V,Constant(active_site_absorb),subdomains,active_site_marker)
+
+    # marking is actually done inside smo.py
+    #bc0 = DirichletBC(V, Constant(active_site_absorb), subdomains,active_site_marker)
+
+    test =0 
     from view import PrintBoundary
-    PrintBoundary(mesh,bc0)
-    
+    if(test==1):
+      # active site
+      #bc0 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
+      # molecular boundary 
+      bc0 = DirichletBC(V, Constant(1), subdomains,molecular_boundary_marker)
+      # outer_boundary
+      #bc0 = DirichletBC(V, Constant(1), subdomains,outer_boundary_marker)
+      PrintBoundary(mesh, bc0)
+      quit()
 
 
     #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
+    # subdomains.set_all(3) # mark facets as sub domain 3
     write_dolfin_files(filename.replace(".m", ""), mesh)
 
-    return mesh,coordinates
+    # test (this works) 
+    #from dolfin import Mesh, FunctionSpace, DirichletBC
+    #fileMesh  ="p.pqr.output.out_mesh.xml.gz"
+    #mesh = Mesh(fileMesh);
+    #V = FunctionSpace(mesh, "CG", 1)
+    #fileSubdomains="p.pqr.output.out_subdomains.xml.gz"
+    #subdomains = MeshFunction("uint", mesh, fileSubdomains)
+    #bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
+    ##bc1 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
+    #PrintBoundary(mesh,bc1,file="test.pvd")
+
+
+    return mesh
     
 
 if __name__ == "__main__":
     ## read data 
-    filename = "xxxx/x.m"
+    filename = r"xxxx/x.m"
     import sys
     if len(sys.argv) != 2:
         raise RuntimeError("expected an mcsf file as second argument")
     filename = sys.argv[1]
-    mesh,coordinates = read_and_mark(filename)
+    mesh = read_and_mark(filename)
     
 #mcsffile = "p.pqr.output.all.m"
 #coordinates,cells, markers = read_mcsf(mcsffile)
