@@ -209,7 +209,7 @@ def read_and_mark(filename):
     #PrintBoundary(mesh,bc1,file="test.pvd")
 
 
-    return mesh
+    return mesh,coordinates
     
 
 if __name__ == "__main__":

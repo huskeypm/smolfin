@@ -1,3 +1,6 @@
+# here we assume slow gating limits, which suggests that 
+# effective kon is the weighted average of the kon for eac
+# markov state
 
 nStates = 3
 absorbing_cond = [0,0.1,0.1,inf] # 0-fully absorb, inf- reflective

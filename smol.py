@@ -60,11 +60,11 @@ def ComputeKon(mesh,intfact,invintfact,up,V):
  
     # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
     Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
+# PKH  - why 1? why define for entire mesh? 
     # Need to know the spatial dimension to compute the shape of derivatives.
-    # PKH - something about invintfact is incompataible with 'up'
     Jp = project(D * intfact * grad(invintfact * up),Vv)
 
-    subdomains = MeshFunction("uint", mesh, 2) # I called this earlier, ok to do again?
+    subdomains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
 
 
     # SOLVED: ERROR: ufl.log.UFLException: Dot product requires non-scalar arguments, got arguments with ranks 0 and 1.
@@ -73,6 +73,9 @@ def ComputeKon(mesh,intfact,invintfact,up,V):
     #n = FacetNormal(mesh)
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
                                 exterior_facet_domains = subdomains)
+    print "NEED TO FITURE OUT WHY I CANT INTEGRATE OVER ACTIVE SITE!!"
+    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(active_site_marker),
+                               # exterior_facet_domains = subdomains)
     kon = boundary_flux_terms / c0;
 
     print "My kon is %f" % (kon)
@@ -120,9 +123,9 @@ def MeshWPotential():
   bc0 = DirichletBC(V,Constant(active_site_absorb),subdomains,active_site_marker)
   bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
   bcs = [bc0,bc1]
-  PrintBoundary(mesh,bc0) 
-  PrintBoundary(mesh,bc1) 
-  quit()
+  #PrintBoundary(mesh,bc0,file="file1.pvd") 
+  #PrintBoundary(mesh,bc1,file="file2.pvd") 
+  #quit()
 
   # apply file values to fuction space
   psi = Function(V,filePotential);
@@ -220,16 +223,14 @@ def PDEPart(mesh,psi,bcs,V):
     F = D * intfact*inner(grad(u), grad(v))*dx
 
     # apply Neumann cond 
-    f_molecular_boundary = Constant(0) # or some function...
-
     # PKH - check w Fenics example, since it seems like ds() no longer needed?
     # (because I already marked the subdomain)
     # PKH where is 'subdomain' used that I defined earlier? 
+    f_molecular_boundary = noflux_molecular_boundary
     F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
 
     # Solve the problem
-    # ERROR:   Process 0: *** Warning: Found no facets matching domain for boundary condition.
     solve(F==0, u, bcs)
 
     # Project the solution

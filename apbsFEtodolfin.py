@@ -1,6 +1,8 @@
 import numpy as np
+# for FINITE ELEMENT APBS outputs (not FD)
 
-def read_apbs_file(filename):
+def read_fe_apbs_file(filename):
+    print "Reading APBS file %s" % filename
     # Grab the lines from the file
     lines = open(filename).readlines()
     coordinates = []
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise RuntimeError("expected an apbs file as second argument")
     filename = sys.argv[1]
-    coordinates, cells, values = read_apbs_file(filename)
+    coordinates, cells, values = read_fe_apbs_file(filename)
     mesh = generate_dolfin_mesh(coordinates, cells)
     values = generate_dolfin_function(mesh, values)
     write_dolfin_files(filename.replace(".dx", ""), mesh, values)

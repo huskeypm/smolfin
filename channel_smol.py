@@ -70,6 +70,7 @@ mesh_domain = UnitCube(10,10,10)
 # dp(x>b,z<a) / dn = 0 
 # dp(x<b,z=0) / dn = inf 
 
+
 smolproblem <-- this stuff
 ksurface = smol(smolproblem)
 

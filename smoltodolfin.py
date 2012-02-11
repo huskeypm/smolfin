@@ -22,10 +22,68 @@ def write_smol_files(filename, mesh,u): # , u,vertexmarkers,facetmarkers):
 #            
 #    return markedvertices
 #
+
+def read_fd_apbs_file(apbsfilename):
+    # read in data 
+    import sys, random
+    from potentialextraction import  Vgrid
+    file = open(apbsfilename, "r")
+    dims = (None, None, None)
+    spac = (None, None, None)
+    origin = (None, None, None)
+    n = None
+    data = []
+    vgrid = Vgrid(dims, spac, origin, data)
+    vgrid.readOpenDX(file)
+    file.close()
+
+    # assign to numpy ar
+    nx = vgrid.dims[0]
+    ny = vgrid.dims[1]
+    nz = vgrid.dims[2]
+    hx = vgrid.spac[0]
+    hy = vgrid.spac[1]
+    hz = vgrid.spac[2]
+    xmin = vgrid.origin[0]
+    ymin = vgrid.origin[1]
+    zmin = vgrid.origin[2]
+    xlen = float(nx-1)*hx
+    ylen = float(ny-1)*hy
+    zlen = float(nz-1)*hz
+    xmax = xmin + xlen
+    ymax = ymin + ylen
+    zmax = zmin + zlen
+    xcent = xmin + 0.5*xlen
+    ycent = ymin + 0.5*ylen
+    zcent = zmin + 0.5*zlen
+
+
+    coordinates = []
+    values = []
+
+    # read coords to arrays
+    for i in range(1, (nx-1)):
+        x = xmin + float(i)*hx
+
+        for j in range(1, (ny-1)):
+            y = ymin + float(j)*hy
+
+            for k in range(1, (nz-1)):
+                z = zmin + float(k)*hz
+                coordinates.append([x,y,z])
+                values.append(vgrid.value((x, y, z)))
+
+    print "Read %d coords " % len(coordinates)
+
+    return(coordinates,values)
+
+
+
 def do_read_write(mcsffilename,apbsfilename,skipAPBS=0):
 
-    # read apbs
-    acoordinates, acells, avalues = read_apbs_file(apbsfilename)
+    # read apbs finite difference mesh 
+    acoordinates,avalues = read_fd_apbs_file(apbsfilename);
+
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     mesh,mcoordinates = read_and_mark(mcsffilename)
@@ -63,6 +121,6 @@ if __name__ == "__main__":
     apbsfilename = sys.argv[2]
 
 
-    #do_read_write(mcsffilename,apbsfilename)
-    do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
+    do_read_write(mcsffilename,apbsfilename)
+    #do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
 
