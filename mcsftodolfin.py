@@ -31,6 +31,7 @@ def mark_dirichlet_vertices(mesh, vertmarkers):
   boundary_markers.array()[:] = vertmarkers
 
 def read_mcsf_file(filename):
+  print "Reading %s" % filename
   lines    =open(filename).readlines()
   
   # header 
@@ -162,12 +163,15 @@ def write_dolfin_files(filename, mesh):
 
 
 
-def read_and_mark(filename):
+# no mark skips the domain marking, etc (workaround for a local problem)
+def read_and_mark(filename, nomark=0):
     coordinates, cells, cellmarkers, vertmarkers = read_mcsf_file(filename)
 
     ## 
     mesh = generate_dolfin_mesh(coordinates, cells)
-    #print mesh
+    if (nomark==1):
+      print "WARNING: only returning mesh for debugfgin purposes"
+      return(mesh)
     
     # generate neumann/dirichlet here
     subdomains = mark_neumann_facets(mesh, cellmarkers)
@@ -209,7 +213,8 @@ def read_and_mark(filename):
     #PrintBoundary(mesh,bc1,file="test.pvd")
 
 
-    return mesh,coordinates
+    #return mesh,coordinates
+    return mesh
     
 
 if __name__ == "__main__":

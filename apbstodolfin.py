@@ -1,5 +1,4 @@
 import numpy as np
-# for FINITE ELEMENT APBS outputs (not FD)
 
 def read_fe_apbs_file(filename):
     print "Reading APBS file %s" % filename
@@ -113,6 +112,7 @@ def interpolate_to_grid(coordinates, values):
 
 
 def read_fd_apbs_file(apbsfilename):
+    print "Reading APBS file %s" % apbsfilename
     # read in data 
     import sys, random
     from potentialextraction import  Vgrid
@@ -175,9 +175,9 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     gridType = "fd"
 
-    if(gridType=="fe")
+    if(gridType=="fe"):
       coordinates, cells, values = read_fe_apbs_file(filename)
-    if(gridType=="fd")
+    if(gridType=="fd"):
       coordinates, cells, values = read_fd_apbs_file(filename)
 
     mesh = generate_dolfin_mesh(coordinates, cells)

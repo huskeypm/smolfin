@@ -27,12 +27,11 @@ def write_smol_files(filename, mesh,u): # , u,vertexmarkers,facetmarkers):
 def do_read_write(mcsffilename,apbsfilename,skipAPBS=0):
 
     # read apbs finite difference mesh 
-#    acoordinates,avalues = read_fd_apbs_file(apbsfilename);
+    acoordinates,avalues = read_fd_apbs_file(apbsfilename);
 
     #read gamer
-    #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
-    mesh,mcoordinates = read_and_mark(mcsffilename,nomark=1)
-    quit()
+    mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
+    #mesh= read_and_mark(mcsffilename,nomark=1)
 
     # have markers for each cell, now need to mark vertices accordingly
     #markedvertices = assign_vertex_markers(mcoordinates, mcells, mmarkers)
@@ -40,6 +39,7 @@ def do_read_write(mcsffilename,apbsfilename,skipAPBS=0):
     # interpolate apbs values onto mcoordinates grid
     if(skipAPBS!=1):
         from scipy.interpolate import griddata
+        mcoordinates = mesh.coordinates()
         mvalues = griddata(acoordinates, avalues,(mcoordinates),method='linear')
     else:
         mvalues = np.zeros( np.size(mcoordinates[:,1]))      
