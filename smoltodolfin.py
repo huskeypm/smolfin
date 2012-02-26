@@ -30,8 +30,9 @@ def do_read_write(mcsffilename,apbsfilename,skipAPBS=0):
     acoordinates,avalues = read_fd_apbs_file(apbsfilename);
 
     #read gamer
-    mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
+    #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
+    mesh= read_and_mark(mcsffilename)
 
     # have markers for each cell, now need to mark vertices accordingly
     #markedvertices = assign_vertex_markers(mcoordinates, mcells, mmarkers)

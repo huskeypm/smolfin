@@ -32,6 +32,10 @@ def mark_dirichlet_vertices(mesh, vertmarkers):
 
 def read_mcsf_file(filename):
   print "Reading %s" % filename
+  if not ".m" in filename:
+    import sys
+    raise RuntimeError("File format not recognized (need .m)")
+
   lines    =open(filename).readlines()
   
   # header 

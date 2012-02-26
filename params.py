@@ -2,9 +2,9 @@
 from dolfin import Constant
 
 # markers
-active_site_marker = 1; # verified 
-outer_boundary_marker = 5 # Verified on 120104_update.tex
-molecular_boundary_marker = 4 # Verified 
+active_site_marker = 1; # verified (red) 
+outer_boundary_marker = 5 # Verified on 120104_update.tex (green)
+molecular_boundary_marker = 4 # Verified (blue) 
 
 # Values 
 active_site_absorb = Constant(0)

@@ -14,7 +14,11 @@ import Sphere
 #import Molecule
 from params import *
 from view import *
+
+class empty:pass
  
+beta = 1/0.693 # 1/kT, kcal/mol
+D = 1 # Diffusion const.
 ## PDE terms
 
 # PMF term in Smoluchowski equation
@@ -45,7 +49,6 @@ def Test():
 
     Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
     # Need to know the spatial dimension to compute the shape of derivatives.
-    D = 1 
     Jp = project(D*grad(psi),Vv)
  
 
@@ -55,32 +58,37 @@ def Test():
 # See eqn (4) of Notes
 # following example on pg 619
 # if sphere, validate against analytical result (see 111128_todo)
-def ComputeKon(mesh,intfact,invintfact,up,V):
+def ComputeKon(mesh,intfact,invintfact,results,V,problem):
     c0 = bulk_conc;
  
     # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
     Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
 # PKH  - why 1? why define for entire mesh? 
     # Need to know the spatial dimension to compute the shape of derivatives.
-    Jp = project(D * intfact * grad(invintfact * up),Vv)
+    print "Check on negative sighns in expr"
+    # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
+    Jp = D * grad(results.up) + beta * results.up * grad(results.pmf)
+    #print "removed part, replace!!"
+    #Jp = project(grad(up),Vv)
 
-    subdomains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
+    # WHY?? subdomains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
 
 
     # SOLVED: ERROR: ufl.log.UFLException: Dot product requires non-scalar arguments, got arguments with ranks 0 and 1.
     # ???
     #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
     #n = FacetNormal(mesh)
-    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
-                                exterior_facet_domains = subdomains)
+    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
+    #                            exterior_facet_domains = subdomains)
     print "NEED TO FITURE OUT WHY I CANT INTEGRATE OVER ACTIVE SITE!!"
-    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(active_site_marker),
-                               # exterior_facet_domains = subdomains)
-    kon = boundary_flux_terms / c0;
+    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(active_site_marker),
+                                exterior_facet_domains = problem.subdomains)
+    print "boundary fl %f" % boundary_flux_terms
+    kon = boundary_flux_terms / float(c0);
 
     print "My kon is %f" % (kon)
 
-    return kon 
+    return (kon,Jp) 
 
 
 # TODO:
@@ -102,23 +110,16 @@ def GetPotential():
 
 # load in APBS example, which has geometry and potential
 # but no boundary
-def MeshWPotential():
+def MeshWPotential(fileMesh,fileSubdomains,filePotential):
   ## load data
   # coordinates
-  # was fileMesh  ="example/molecule/potential-0_mesh.xml.gz"
-  #fileMesh  ="example/molecule/p.pqr.output.out.mesh.xml.gz"
-  fileMesh  ="example/molecule/p.pqr.output.out_mesh.xml.gz"
   mesh = Mesh(fileMesh);
 
-  # electrostatic potential
-  # was potential="example/molecule/potential-0_values.xml.gz"
-  filePotential="example/molecule/p.pqr.output.out_values.xml.gz"
 
   # Function space
   V = FunctionSpace(mesh, "CG", 1)
 
   # load subdomains 
-  fileSubdomains="example/molecule/p.pqr.output.out_subdomains.xml.gz"
   subdomains = MeshFunction("uint", mesh, fileSubdomains) 
   bc0 = DirichletBC(V,Constant(active_site_absorb),subdomains,active_site_marker)
   bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
@@ -128,13 +129,21 @@ def MeshWPotential():
   #quit()
 
   # apply file values to fuction space
-  psi = Function(V,filePotential);
-  psi.vector()[:]=0;
+  if(filePotential!="none"):
+    psi = Function(V,filePotential);
+    psi.vector()[:]=0;
+  else:
+    psi = Function(V)
+    psi.vector()[:] = 0.0
+ 
+
 
   # alternatively I need to interpolate the grid from APBS 
   # see email from Johand around 1128
 
-  return mesh,psi,bcs,V
+  problem = empty()
+  problem.subdomains = subdomains
+  return mesh,psi,bcs,V,problem
 
 
 # boundary is given as input, here we compute potential (for sphere)
@@ -194,7 +203,7 @@ def MeshNoPotential(debug=0):
     x = mesh.coordinates() 
     psi = interpolate(Sphere.Potential(x),V)
     # PKH: I need to check potential, since code x-plodes 
-    psi.vector()[:]=0;
+    #psi.vector()[:]=0;
 
   return mesh, psi,bcs,V
 
@@ -212,7 +221,6 @@ def PDEPart(mesh,psi,bcs,V):
 
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
-    beta = 1/0.693 # 1/kT, kcal/mol
     intfact = exp(- beta * pmf)
     invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
@@ -226,8 +234,9 @@ def PDEPart(mesh,psi,bcs,V):
     # PKH - check w Fenics example, since it seems like ds() no longer needed?
     # (because I already marked the subdomain)
     # PKH where is 'subdomain' used that I defined earlier? 
-    f_molecular_boundary = noflux_molecular_boundary
-    F += f_molecular_boundary*v*ds(molecular_boundary_marker)
+    # since noflux --> boundary==0, don't need to include this 
+    #f_molecular_boundary = noflux_molecular_boundary
+    #F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
 
     # Solve the problem
@@ -241,9 +250,75 @@ def PDEPart(mesh,psi,bcs,V):
     File("solution.pvd") << up
     #plot(up, interactive=True)
  
-    return intfact,invintfact,up
+    results = empty()
+    results.up = up
+    results.pmf= pmf
+    return intfact,invintfact,results
 
 ## Domain
+
+def Run(fileMesh,fileSubdomains,filePotential="NONE"):
+
+
+  # get stuff 
+  mesh, psi,bcs,V,problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+
+  # solve PDE
+  intfact,invintfact,results= PDEPart(mesh,psi,bcs,V)
+  
+  # print solution
+  File("up.pvd") << results.up
+
+  # compute something
+  kon = ComputeKon(mesh,intfact,invintfact,results,V,problem) 
+
+
+
+def Debug():
+  # was fileMesh  ="example/molecule/potential-0_mesh.xml.gz"
+  #fileMesh  ="example/molecule/p.pqr.output.out.mesh.xml.gz"
+  fileMesh  ="example/molecule/p.pqr.output.out_mesh.xml.gz"
+  # was potential="example/molecule/potential-0_values.xml.gz"
+  filePotential="example/molecule/p.pqr.output.out_values.xml.gz"
+  fileSubdomains="example/molecule/p.pqr.output.out_subdomains.xml.gz"
+
+  # if loading from APBS
+  apbs =1
+  gamer= 0
+  test = 0
+  if 0:
+    1
+  ## NOT SUPPORTED YET 
+  if(apbs==1):
+    mesh, psi,bcs,V,problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+
+  # sphere example
+  elif(gamer==1):
+    mesh, psi,bcs, V = MeshNoPotential()
+ 
+  elif(test==1):
+    # ignore me for testing PKH
+    Test()
+    quit()
+
+  else:
+    raise RuntimeError("Bug Pete to write usable code. You request dumbfounded me")
+
+
+
+  # solve PDE
+  print "FAIL!!!"
+  quit()
+  intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
+  
+  # print solution
+  File("up.pvd") << up
+
+  # compute something
+  (kon,Jp) = ComputeKon(mesh,intfact,invintfact,up,V,problem) 
+  return Jp
+
+
 
 
 def SimpleTest():
@@ -273,39 +348,29 @@ def SimpleTest():
 
 
 if __name__ == "__main__":
+  msg="smol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz>"
 
-  # if loading from APBS
-  apbs =1
-  gamer= 0
-  test = 0
-  if 0:
-    1
-  ## NOT SUPPORTED YET 
-  if(apbs==1):
-    mesh, psi,bcs,V = MeshWPotential()
+  import sys
+  if len(sys.argv) < 2:  
+      raise RuntimeError(msg)
 
-  # sphere example
-  elif(gamer==1):
-    mesh, psi,bcs, V = MeshNoPotential()
- 
-  elif(test==1):
-    # ignore me for testing PKH
-    Test()
-    quit()
+  if(sys.argv[1]=="test"):
+    print "In testing mode"
+    Jp=Debug()
+
+  elif(len(sys.argv)==3):
+    print "In run mode"
+    fileMesh = sys.argv[1]
+    fileSubdomains= sys.argv[2]
+    Run(fileMesh,fileSubdomains,filePotential="none")
+
+  elif(len(sys.argv)==4):
+    print "In run mode"
+    fileMesh = sys.argv[1]
+    fileSubdomains= sys.argv[2]
+    filePotential= sys.argv[3]
+    Run(fileMesh,fileSubdomains,filePotential)
 
   else:
-    print "Bug Pete to write usable code. You request dumbfounded me"
-    quit()
-
-
-
-  # solve PDE
-  intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
-  
-  # print solution
-  File("up.pvd") << up
-
-  # compute something
-  kon = ComputeKon(mesh,intfact,invintfact,up,V) 
-
+    raise RuntimeError(msg)
 

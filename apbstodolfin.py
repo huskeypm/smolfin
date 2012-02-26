@@ -113,6 +113,10 @@ def interpolate_to_grid(coordinates, values):
 
 def read_fd_apbs_file(apbsfilename):
     print "Reading APBS file %s" % apbsfilename
+    if not ".dx" in apbsfilename:
+      import sys
+      raise RuntimeError("File format not recognized (need dx)")
+
     # read in data 
     import sys, random
     from potentialextraction import  Vgrid
