@@ -12,27 +12,28 @@ from dolfin import *
 import numpy as np
 import Sphere
 #import Molecule
-from params import *
 from view import *
+from params import * # must do this for class
 
 class empty:pass
+
+parms  = params()
+problem = empty()
+results = empty()
  
-beta = 1/0.693 # 1/kT, kcal/mol
-D = 1 # Diffusion const.
 ## PDE terms
 
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-def SmolPMF(V,psi):
-    valence = Constant(2)
+def SmolPMF(problem,V,psi):
 
-    pmf = valence * psi
+    pmf = parms.valence * psi
    
     # Not needed, given how I formulated the PDE 
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
 
-    return pmf #,dpmf
+    problem.pmf = pmf
 
 
 # This works
@@ -58,55 +59,25 @@ def Test():
 # See eqn (4) of Notes
 # following example on pg 619
 # if sphere, validate against analytical result (see 111128_todo)
-def ComputeKon(mesh,intfact,invintfact,results,V,problem):
-    c0 = bulk_conc;
+def ComputeKon(problem,results):
  
     # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
-    Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
-# PKH  - why 1? why define for entire mesh? 
+    Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
+
     # Need to know the spatial dimension to compute the shape of derivatives.
     print "Check on negative sighns in expr"
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
-    Jp = D * grad(results.up) + beta * results.up * grad(results.pmf)
-    #print "removed part, replace!!"
-    #Jp = project(grad(up),Vv)
+    Jp = parms.D * grad(results.up) + parms.beta * results.up * grad(problem.pmf)
 
-    # WHY?? subdomains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
-
-
-    # SOLVED: ERROR: ufl.log.UFLException: Dot product requires non-scalar arguments, got arguments with ranks 0 and 1.
-    # ???
-    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
-    #n = FacetNormal(mesh)
-    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(outer_boundary_marker),
-    #                            exterior_facet_domains = subdomains)
-    print "NEED TO FITURE OUT WHY I CANT INTEGRATE OVER ACTIVE SITE!!"
-    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(active_site_marker),
+    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(parms.active_site_marker),
                                 exterior_facet_domains = problem.subdomains)
     print "boundary fl %f" % boundary_flux_terms
-    kon = boundary_flux_terms / float(c0);
+    kon = boundary_flux_terms / float(parms.bulk_conc);
 
     print "My kon is %f" % (kon)
 
-    return (kon,Jp) 
-
-
-# TODO:
-def GetPotential():
-  # read in apbs mesh/values (johan did this)
-  meshAPBS;
-  valuesAPBS;
-
-  # read in/pass in mesh from Gamer (different node locations)
-  meshGamer; 
-  V ; # meshGamer's functionspace  
-
-  #PKH  APBS mesh differs from Gamer mesh, therefore need to interpolate APBS values onto Gamer mesh.
-  # maybe do this: http://stackoverflow.com/questions/7701669/interpolate-large-irregular-grid-onto-another-irregular-grid-in-python
-  v = scipy.interpolate(meshAPBS,valuesAPBS,meshGamer,V)
-  
-
-  1
+    results.kon = kon
+    results.Jp  = Jp   
 
 # load in APBS example, which has geometry and potential
 # but no boundary
@@ -121,8 +92,8 @@ def MeshWPotential(fileMesh,fileSubdomains,filePotential):
 
   # load subdomains 
   subdomains = MeshFunction("uint", mesh, fileSubdomains) 
-  bc0 = DirichletBC(V,Constant(active_site_absorb),subdomains,active_site_marker)
-  bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
+  bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
+  bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
   bcs = [bc0,bc1]
   #PrintBoundary(mesh,bc0,file="file1.pvd") 
   #PrintBoundary(mesh,bc1,file="file2.pvd") 
@@ -141,9 +112,13 @@ def MeshWPotential(fileMesh,fileSubdomains,filePotential):
   # alternatively I need to interpolate the grid from APBS 
   # see email from Johand around 1128
 
-  problem = empty()
+  #problem = empty()
   problem.subdomains = subdomains
-  return mesh,psi,bcs,V,problem
+  problem.mesh=mesh
+  problem.psi = psi
+  problem.bcs = bcs
+  problem.V   = V
+  return problem
 
 
 # boundary is given as input, here we compute potential (for sphere)
@@ -171,8 +146,8 @@ def MeshNoPotential(debug=0):
     bcs=1
   else:
     # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
-    bc_active = DirichletBC(V, Constant(active_site_absorb), Sphere.DirichletActiveSite())
-    bc_bulk = DirichletBC(V, Constant(bulk_conc), Sphere.DirichletBulkBoundary())
+    bc_active = DirichletBC(V, Constant(parms.active_site_absorb), Sphere.DirichletActiveSite())
+    bc_bulk = DirichletBC(V, Constant(parms.bulk_conc), Sphere.DirichletBulkBoundary())
     
     bcs = [bc_active, bc_bulk]
 
@@ -195,8 +170,8 @@ def MeshNoPotential(debug=0):
 
   haveAPBS=0
   if(haveAPBS):
-    psi = GetPotential()
-
+    #psi = GetPotential()
+    1
   ## compute potential
   else:
     # PKH Is this the best way of computing Sphere potential over mesh coordinates? 
@@ -205,12 +180,18 @@ def MeshNoPotential(debug=0):
     # PKH: I need to check potential, since code x-plodes 
     #psi.vector()[:]=0;
 
-  return mesh, psi,bcs,V
+  problem.subdomains = subdomains
+  problem.mesh=mesh
+  problem.psi = psi
+  problem.bcs = bcs
+  problem.V   = V
+  return problem
 
-def PDEPart(mesh,psi,bcs,V):
+def PDEPart(problem): # h,psi,bcs,V):
 
     # Compute W, dW from psi
-    pmf = SmolPMF(V,psi)
+    SmolPMF(problem,problem.V,problem.psi)
+    V = problem.V
 
     # The solution function
     u = Function(V)
@@ -221,14 +202,14 @@ def PDEPart(mesh,psi,bcs,V):
 
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
-    intfact = exp(- beta * pmf)
+    intfact = exp(- parms.beta * problem.pmf)
     invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
     # also refer ti Zhou eqn 2,3 uin 2011
     # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
     # form of the PDE
     #  (no time dependence,so only consider del u del v term)
-    F = D * intfact*inner(grad(u), grad(v))*dx
+    F = parms.D * intfact*inner(grad(u), grad(v))*dx
 
     # apply Neumann cond 
     # PKH - check w Fenics example, since it seems like ds() no longer needed?
@@ -240,7 +221,8 @@ def PDEPart(mesh,psi,bcs,V):
 
 
     # Solve the problem
-    solve(F==0, u, bcs)
+    # prob. is linear in u, so technically don't need to use a non-linear solver....
+    solve(F==0, u, problem.bcs)
 
     # Project the solution
     # Return projection of given expression *v* onto the finite element space *V*
@@ -250,10 +232,9 @@ def PDEPart(mesh,psi,bcs,V):
     File("solution.pvd") << up
     #plot(up, interactive=True)
  
-    results = empty()
     results.up = up
-    results.pmf= pmf
-    return intfact,invintfact,results
+    #problem.pmf= pmf # shouldn't go here 
+    return results
 
 ## Domain
 
@@ -261,16 +242,16 @@ def Run(fileMesh,fileSubdomains,filePotential="NONE"):
 
 
   # get stuff 
-  mesh, psi,bcs,V,problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+  problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
 
   # solve PDE
-  intfact,invintfact,results= PDEPart(mesh,psi,bcs,V)
+  results= PDEPart(problem)
   
   # print solution
   File("up.pvd") << results.up
 
   # compute something
-  kon = ComputeKon(mesh,intfact,invintfact,results,V,problem) 
+  ComputeKon(problem, results)    
 
 
 
@@ -290,11 +271,11 @@ def Debug():
     1
   ## NOT SUPPORTED YET 
   if(apbs==1):
-    mesh, psi,bcs,V,problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+    problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
 
   # sphere example
   elif(gamer==1):
-    mesh, psi,bcs, V = MeshNoPotential()
+    problem = MeshNoPotential()
  
   elif(test==1):
     # ignore me for testing PKH
@@ -305,18 +286,19 @@ def Debug():
     raise RuntimeError("Bug Pete to write usable code. You request dumbfounded me")
 
 
+  problem.mesh=mesh
+  problem.psi = psi
+  problem.bcs = bcs
+  problem.V   = V
 
   # solve PDE
-  print "FAIL!!!"
-  quit()
-  intfact,invintfact,up= PDEPart(mesh,psi,bcs,V)
+  results = PDEPart(problem) # h,psi,bcs,V)
   
   # print solution
   File("up.pvd") << up
 
-  # compute something
-  (kon,Jp) = ComputeKon(mesh,intfact,invintfact,up,V,problem) 
-  return Jp
+  # compute somethingnn
+  ComputeKon(problem,results) 
 
 
 
@@ -338,7 +320,7 @@ def SimpleTest():
 
 #
 # PDE
-# 0 = del D [del - beta F(r)] p(r)
+# 0 = del D [del - 
 # F(r) = - del U(r)
 # Eqn 3 of pg 4 in  notetaker doc
 # but, we use integration factor instead to get Eqn (4)
@@ -348,7 +330,7 @@ def SimpleTest():
 
 
 if __name__ == "__main__":
-  msg="smol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz>"
+  msg="smol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>"
 
   import sys
   if len(sys.argv) < 2:  
@@ -356,7 +338,19 @@ if __name__ == "__main__":
 
   if(sys.argv[1]=="test"):
     print "In testing mode"
-    Jp=Debug()
+    Debug()
+
+  elif(sys.argv[1]=="-root"):
+    root = sys.argv[2]
+    fileMesh = root+"_mesh.xml.gz"
+    fileSubdomains= root+"_subdomains.xml.gz"
+    filePotential= root+"_values.xml.gz"
+    import os.path
+    if(os.path.isfile(filePotential)==0):
+       filePotential= "none";
+       print "Didn't see electrostatic potential..."
+
+    Run(fileMesh,fileSubdomains,filePotential="none")
 
   elif(len(sys.argv)==3):
     print "In run mode"

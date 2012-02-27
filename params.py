@@ -1,19 +1,24 @@
 ## VARIABLES
 from dolfin import Constant
 
-# markers
-active_site_marker = 1; # verified (red) 
-outer_boundary_marker = 5 # Verified on 120104_update.tex (green)
-molecular_boundary_marker = 4 # Verified (blue) 
 
-# Values 
-active_site_absorb = Constant(0)
-bulk_conc = Constant(1.0)
-noflux_molecular_boundary = Constant(0)
-D = 1.0 # diffusion constant
+class params:
+  def __init__(self):
+  # markers
+    self.active_site_marker = 1; # verified (red) 
+    self.outer_boundary_marker = 5 # Verified on 120104_update.tex (green)
+    self.molecular_boundary_marker = 4 # Verified (blue) 
 
-# temporary
-temp_outerR = 5.0
-temp_innerR = 1.0
-temp_siteZ  = 0.0
+    # Values 
+    self.noflux_molecular_boundary = Constant(0) # generally won't change this 
+    self.active_site_absorb = Constant(0)
+    self.bulk_conc = Constant(1.0)
+    self.D = 1.0 # diffusion constant, [um^2/s]
+    self.beta = 1/0.693 # 1/kT, [kcal/mol]
+    self.valence = Constant(2)
+
+    # temporary
+    self.temp_outerR = 5.0
+    self.temp_innerR = 1.0
+    self.temp_siteZ  = 0.0
 
