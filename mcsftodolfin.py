@@ -1,6 +1,9 @@
 # Pete Kekenes-Huskey
 import numpy as np
-from params import *
+#from params import *
+import params 
+from params import * # must do this for class
+parms = params()
 
 def mark_neumann_facets(mesh, cellmarkers):
     #from dolfin import cells, facets,mesh
@@ -16,7 +19,7 @@ def mark_neumann_facets(mesh, cellmarkers):
 
     subdomains = MeshFunction("uint", mesh, facet_markers)
     print "Num faces at active_site_marker:", \
-          (subdomains.array()==active_site_marker).sum()
+          (subdomains.array()==parms.active_site_marker).sum()
 
     File("subdomains.pvd") << subdomains
     
@@ -139,6 +142,8 @@ def generate_dolfin_mesh(coordinates, cells):
     mesh_cells.flags.writeable = True
     mesh_cells[:] = cells
 
+    print "I think cells need to be marked with '1' here"
+
     # Return mesh
     return mesh
 
@@ -164,6 +169,11 @@ def write_dolfin_files(filename, mesh):
     #sub_domains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
     sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
     File(filename+"_subdomains.xml.gz") << sub_domains
+
+    # write cell marker file 
+    from dolfin import CellFunction
+    cells = CellFunction("uint", mesh)
+    File(filename+"_cells.xml.gz") << cells       
 
 
 
@@ -194,7 +204,7 @@ def read_and_mark(filename, nomark=0):
       # active site
       #bc0 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
       # molecular boundary 
-      bc0 = DirichletBC(V, Constant(1), subdomains,molecular_boundary_marker)
+      bc0 = DirichletBC(V, Constant(1), subdomains,parms.molecular_boundary_marker)
       # outer_boundary
       #bc0 = DirichletBC(V, Constant(1), subdomains,outer_boundary_marker)
       PrintBoundary(mesh, bc0)
