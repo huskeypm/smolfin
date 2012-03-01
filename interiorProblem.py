@@ -20,9 +20,9 @@ def Sigma(x):
   return(sigma_x)
 
 ## PMF 
-def PMFTerm(fileIn,xrange,problem):
+def PMFTerm(xrange,problem):
   # get data
-  dat = numpy.loadtxt(fileIn);
+  dat = numpy.loadtxt(problem.filePMF);
   x = dat[:,0]
   y = dat[:,1]
 
@@ -39,11 +39,11 @@ def PMFTerm(fileIn,xrange,problem):
   problem.boltz = boltz
 
   
-def InteriorProblem(fileIn,x0,xL):
+# Based on integral term in (4.1) Berez ref 
+def Run(problem):
   # prepare integrand 
-  problem = empty() 
-  xrange = np.array([x0,xL])
-  PMFTerm(fileIn,xrange,problem)
+  xrange = np.array([problem.x0,problem.xL])
+  PMFTerm(xrange,problem)
   
   problem.D_x = DiffusionConst(x)
   problem.Sigma_x = Sigma(x)
@@ -54,7 +54,9 @@ def InteriorProblem(fileIn,x0,xL):
   from numpy import trapz 
   # trapz(y,x)
   results = empty()
-  results.area = trapz(integ,x)
+  # for consistency, defining kpmf as 1/IntegralTerm in 4.1
+  integral = trapz(integ,x)
+  results.invkPMF= integral
   
   # provide Boltzman distribution at boundary x=L (channel mouth location)
   # note: be sure that this is a boltzman fact, as is the quantity in PMFTerm
@@ -63,22 +65,25 @@ def InteriorProblem(fileIn,x0,xL):
   results.sigma_xL= problem.Sigma_x[ xL ]
   results.diff_xL= problem.Diff_x[ xL ]
  
-  return (problem,results)
+  return (results)
   
 
 if __name__ == "__main__":
+    problem = empty() 
+
     # inputs 
-    # pmf values
-    #fileIn="/net/home/huskeypm/localTemp/serca/120222/out.pmf"
-    fileIn="/home/huskeypm/sources/dolfin_smol/example/out.pmf"
-    # range over which pmf is defined (allows discarding of points)
-    # where active site is located
-    x0 = 0
-    # where interfac is located
-    xL = 25        
     import sys
     if len(sys.argv) != 2:
         raise RuntimeError("expected blahlah file as second argument")
-    filename = sys.argv[1]
-    InteriorProblem(fileIn,x0,xL)
+    # pmf values
+    #filePMF ="/net/home/huskeypm/localTemp/serca/120222/out.pmf"
+    #filePMF ="/home/huskeypm/sources/dolfin_smol/example/out.pmf"
+    # range over which pmf is defined (allows discarding of points)
+    # where active site is located
+    problem.x0 = 0
+    # where interfac is located
+    problem.xL = 25        
+    problem.filePMF = sys.argv[1]
+
+    Run(problem)  
 

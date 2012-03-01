@@ -198,33 +198,7 @@ def read_and_mark(filename, nomark=0):
     # marking is actually done inside smo.py
     #bc0 = DirichletBC(V, Constant(active_site_absorb), subdomains,active_site_marker)
 
-    test =0 
-    from view import PrintBoundary
-    if(test==1):
-      # active site
-      #bc0 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
-      # molecular boundary 
-      bc0 = DirichletBC(V, Constant(1), subdomains,parms.molecular_boundary_marker)
-      # outer_boundary
-      #bc0 = DirichletBC(V, Constant(1), subdomains,outer_boundary_marker)
-      PrintBoundary(mesh, bc0)
-      quit()
-
-
-    #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
-    # subdomains.set_all(3) # mark facets as sub domain 3
     write_dolfin_files(filename.replace(".m", ""), mesh)
-
-    # test (this works) 
-    #from dolfin import Mesh, FunctionSpace, DirichletBC
-    #fileMesh  ="p.pqr.output.out_mesh.xml.gz"
-    #mesh = Mesh(fileMesh);
-    #V = FunctionSpace(mesh, "CG", 1)
-    #fileSubdomains="p.pqr.output.out_subdomains.xml.gz"
-    #subdomains = MeshFunction("uint", mesh, fileSubdomains)
-    #bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
-    ##bc1 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
-    #PrintBoundary(mesh,bc1,file="test.pvd")
 
 
     #return mesh,coordinates

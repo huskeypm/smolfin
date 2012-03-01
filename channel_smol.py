@@ -1,90 +1,62 @@
 
-from smol import *
+import smol
+import interiorProblem
 
-active_site_radius = 1
-
-# linear potential from 
-def linear_potential(x):
-  F = -1; # minimum energy 
-  z = x[2];
-  pmf = -(F/a) * z 
-
-  if (z<-a):
-    pmf = F 
-  elsif (z>0):
-    pmf = 0
-
-
-  return pmf
-
-# define 'area' (x,y) along channel as a function of z
-# assume constant for now 
-def sigma_channel(x)
-  area = 4 * 3.14 * (active_site_radius^2)
-  sigma = Constant(area)
-  return sigma  
-
-
-# input 1D (for now) PMF for channel 
-def PMF_channel():
-  # 
-  linear_potential()
-  
-  
  
-
-
-### problem definition 
 # divided into interior (PMF-driven) and exterior (diffusion driven) problems
 # This script primarily deals with interior problem and passes exterior problem to smol 
+def RunChannelSmol(problem): 
+  ## inputs
+  problem.x0=0
+  problem.xL=25
+  invKappa0 = 0;    # (intrinsic reaction rate)^-1   # invKappa=0 implies IRR is infinitely gast
+ 
+  ## PMF domain 
+  print "Assuming values for range of x values over which pmf is defined"
+  interiorResult = interiorProblem.Run(problem)
 
-## PMF domain 
-mesh_channel = UnitLine(10)
-PMF_channel(mesh_channel)
+  # need to form (2.10) Berez using quantities from interior problem and exterior problem
+  # WARNING - need to make sure area of binding tunnel interface on the exterior problem 
+  # matches that at the interior problem
+  # if we asume steady state, I think we can use (2.8) at x=L for g_1(L,t) in (2.10)
+  g1_L0 = result.sigma_L * exp(-beta*result.VL)   # g1(x=L,t=0)
+  # binding Channel Term in (2.10) [external PMF due to electrostatics handled elsewhere) 
+  bindChannelTerm = g1_L0 / (result.sigma_L * exp(-beta*result.VL) )
 
-## init cond
-# g(r,0) = exp(-beta pmf(r))
-# Since we assume the PMF is 0 outside of the channel,
-# we let g(r>channel,0) = 1
-
-
-# solve 1D PDE for g1 (eq 2.7 Berez)
-# base this on simple 1D Fenics example 
-#dg1/dt = d/dx D sigma(x) exp(-beta * pmf(x) ) d/dx g1 / (sigma(x) exp(-beta*pmf(x) 
-
-# solve for g at t--> inf (stdy state)
-kchannel = g(0)
-
-
-
-## Diffusion domain (handled by Smol) 
-# Cube of size a with reactive patch at x<b, z=0
-# b = active_site_radius
-mesh_domain = UnitCube(10,10,10)
+  problem.bindChannelTerm = bindChannelTerm 
 
 
-## define boundaries
-# Dirichlet 
-# p(z=a) = 1
-# Neumann (put into weak form) 
-# dp(x>b,z<a) / dn = 0 
-# dp(x<b,z=0) / dn = inf 
+  ## exterior domain 
+  exteriorResult = smol.Run(problem,exteriorProblem=1)
+  # defined in 4.1 Berez 
+  invkE = 1/exteriorResult.kon
 
 
-smolproblem <-- this stuff
-ksurface = smol(smolproblem)
+  ## kon 
+  # Berez 4.1, assuming that Kappa0 >> s(0) e(-beta V(0))
+  invkss = invkE + invKappa0 + interiorResult.invkPMF
+  result = empty()
+  result.kss = 1/invkss
+   
+  return result 
 
 
-## k overall
-# from eqn 2.9 of Berez
-k = ksurface * kchannel
+# pmf - refers to output from WHAM 
+if __name__ == "__main__":
+  msg="channel_smol.py -root <file> <pmf>"
 
+  import sys
+  if len(sys.argv) < 2:
+      raise RuntimeError(msg)
 
+  elif(sys.argv[1]=="-root"):
+    root = sys.argv[2]
+    problem.fileMesh = root+"_mesh.xml.gz"
+    problem.fileSubdomains= root+"_subdomains.xml.gz"
+    problem.filePotential= root+"_values.xml.gz"
 
+    # provble.FilePMF="/home/huskeypm/sources/dolfin_smol/example/out.pmf"
+    problem.filePMF = sys.argv[3]
 
-
-
-kon = smol()
-
-k = Function(PMF_channel,kon)
+    RunChannelSmol(problem)
 

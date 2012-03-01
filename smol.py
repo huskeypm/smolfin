@@ -17,8 +17,13 @@ from params import * # must do this for class
 
 class empty:pass
 
+class problem:
+  filePotential="none"
+  fileMesh="none"
+  fileSubdomains="none"
+
 parms  = params()
-problem = empty()
+problem = problem()
 results = empty()
  
 ## PDE terms
@@ -26,7 +31,7 @@ results = empty()
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-def SmolPMF(problem,V,psi):
+def ElectrostaticPMF(problem,V,psi):
 
     pmf = parms.valence * psi
    
@@ -79,118 +84,70 @@ def ComputeKon(problem,results):
     results.kon = kon
     results.Jp  = Jp   
 
+# from (2.10) of Berez 
+# problem s.b. globally defined, so we don't have to pass it in separately
+def InterfaceFunction(x,on_boundary):
+  # NOTE: need to figure out how to grab appropriate pmf value from mesh, since interfaceFunction passes in coordinate value 
+  # should probably ask Dolfin community instead of pestering Johan!!
+  g_xt = exp(-problem.pmf(x) * beta) * problem.bindingChannelTerm
+  return g_xt
+  
+
 # load in APBS example, which has geometry and potential
 # but no boundary
-def MeshWPotential(fileMesh,fileSubdomains,filePotential):
+# ExteriorProblem means that we have two PDEs separated by an interface at the 'binding channel MOUTH ' in the 3D mesh. 
+# ALthough we label this as an active site in the mesh, the active site is technically at the 'end' of the binding channel 
+# and is handled in the interior problem. If exteriorProblem is defined, then we pass in the boundary condition at the 
+# interface via interiorProblem  
+def ProblemDefinition(fileMesh,fileSubdomains,filePotential,exteriorProblem=0)
   ## load data
   # coordinates
   mesh = Mesh(fileMesh);
 
-
-  # Function space
-  V = FunctionSpace(mesh, "CG", 1)
-
   # load subdomains 
   subdomains = MeshFunction("uint", mesh, fileSubdomains) 
-  bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
-  bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
-  bcs = [bc0,bc1]
-  #PrintBoundary(mesh,bc0,file="file1.pvd") 
-  #PrintBoundary(mesh,bc1,file="file2.pvd") 
-  #quit()
 
-  # apply file values to fuction space
+  # Load and apply electrostatic potential values to mesh 
+  V = FunctionSpace(mesh, "CG", 1)
   if(filePotential!="none"):
     psi = Function(V,filePotential);
     psi.vector()[:]=0;
   else:
     psi = Function(V)
     psi.vector()[:] = 0.0
+
+  ## assign init cond??????
+
+  ## assign BC 
+  # NOTE: if doing the time-dependent solution, will need to update this at every time step 
+  #if(exteriorProblem==0):
+    # assign usual absorbing condition 
+  bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
+  #else: # PKH - uncommented, since I think Zhou ends up keeping using absorbing condition on exterior prob. and imposing
+         # boundary cond on the interior problem, instead (see 2.16)
+  #  # assign eqn (2.10) of Berez reference 
+  #  # hopefully this is the correct way to pass it in 
+  #  bc0 = DirichletBC(V,InterfaceFunction,subdomains,parms.active_site_marker)
+
+  bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
  
-
-
-  # alternatively I need to interpolate the grid from APBS 
-  # see email from Johand around 1128
-
-  #problem = empty()
+  bcs = [bc0,bc1]
+ 
+  ## Package problem 
   problem.subdomains = subdomains
   problem.mesh=mesh
   problem.psi = psi
   problem.bcs = bcs
   problem.V   = V
+
   return problem
 
 
-# boundary is given as input, here we compute potential (for sphere)
-# given input boundary. Note: normally youd want to use APBS to get
-# the electrostatic potential
-def MeshNoPotential(debug=0):
 
-  ## load data
-  # data from ~/localTemp/NBCR/smol/born_ex
-  fileMesh = "example/sphere/p.pqr.output.all_mesh.xml.gz"
-  mesh = Mesh(fileMesh)
-  
-
-  # Function space
-  V = FunctionSpace(mesh, "CG", 1)
-
-
-  ## load markers
-  useMarkers=1
-  # Need to pull these from Gamer output at some point 
-
-  ## define Dirichlet boundary
-  bcs=1
-  if(useMarkers==1):
-    bcs=1
-  else:
-    # PKH: (Found no facets matching domain for boundary condition.) <-- probably from Dirichlet, since Neumann BC expressed in weak form of PDE
-    bc_active = DirichletBC(V, Constant(parms.active_site_absorb), Sphere.DirichletActiveSite())
-    bc_bulk = DirichletBC(V, Constant(parms.bulk_conc), Sphere.DirichletBulkBoundary())
-    
-    bcs = [bc_active, bc_bulk]
-
-  if(debug==0):
-      return mesh
-
-  ## Define Neumann boundary
-  if(useMarkers==1):
-    1
-  else:      
-    # PKH: Verify that Neumann BC is implemented correctly
-    subdomains = MeshFunction("uint",mesh,2)
-    subdomain = Sphere.NeumannMolecularBoundary()
-    subdomain.mark(subdomains,molecular_boundary_marker)
-
-    # PKH: do I need to mark BulkBoundary as well in order to use assemble call later?
-    # NOTE: is this for sure where I should be computing kon? Seems like the flux along this boundary s.b. zero!
-    subdomainOuter = Sphere.DirichletBulkBoundary()
-    subdomainOuter.mark(subdomains,outer_boundary_marker)
-
-  haveAPBS=0
-  if(haveAPBS):
-    #psi = GetPotential()
-    1
-  ## compute potential
-  else:
-    # PKH Is this the best way of computing Sphere potential over mesh coordinates? 
-    x = mesh.coordinates() 
-    psi = interpolate(Sphere.Potential(x),V)
-    # PKH: I need to check potential, since code x-plodes 
-    #psi.vector()[:]=0;
-
-  problem.subdomains = subdomains
-  problem.mesh=mesh
-  problem.psi = psi
-  problem.bcs = bcs
-  problem.V   = V
-  return problem
-
-def PDEPart(problem): # h,psi,bcs,V):
+def SolveSteadyState(problem): 
 
     # Compute W, dW from psi
-    SmolPMF(problem,problem.V,problem.psi)
+    ElectrostaticPMF(problem,problem.V,problem.psi)
     V = problem.V
 
     # The solution function
@@ -224,34 +181,40 @@ def PDEPart(problem): # h,psi,bcs,V):
     # prob. is linear in u, so technically don't need to use a non-linear solver....
     solve(F==0, u, problem.bcs)
 
+
+    # PKH: do I need to apply the initial condition? 
+    # u_1 = params.bulk_conc * exp(-beta * pmf)
+    # u_1.assign(u) # following pg 50 of Logg 
+
     # Project the solution
     # Return projection of given expression *v* onto the finite element space *V*
     # Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
     up = project(intfact*u)
+    results.up = up
 
+    ## print solution
     File("solution.pvd") << up
     #plot(up, interactive=True)
+    File("up.pvd") << results.up
+
  
-    results.up = up
     #problem.pmf= pmf # shouldn't go here 
     return results
 
 ## Domain
 
-def Run(fileMesh,fileSubdomains,filePotential="NONE"):
-
+def Run(problem,exteriorProblem=0):
 
   # get stuff 
-  problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+  problem = ProblemDefinition(problem,exteriorProblem)
 
   # solve PDE
-  results= PDEPart(problem)
+  results= SolveSteadyState(problem)
   
-  # print solution
-  File("up.pvd") << results.up
-
   # compute something
   ComputeKon(problem, results)    
+
+  return results 
 
 
 
@@ -265,17 +228,17 @@ def Debug():
 
   # if loading from APBS
   apbs =1
-  gamer= 0
-  test = 0
+  gamer= 0 # should never use this 
+  test = 0 # should never use this 
   if 0:
     1
   ## NOT SUPPORTED YET 
   if(apbs==1):
-    problem = MeshWPotential(fileMesh,fileSubdomains,filePotential)
+    problem = ProblemDefinition(fileMesh,fileSubdomains,filePotential)
 
   # sphere example
   elif(gamer==1):
-    problem = MeshNoPotential()
+    problem = MeshNoPotential() # in old.py 
  
   elif(test==1):
     # ignore me for testing PKH
@@ -292,7 +255,7 @@ def Debug():
   problem.V   = V
 
   # solve PDE
-  results = PDEPart(problem) # h,psi,bcs,V)
+  results = SolveSteadyState(problem) # h,psi,bcs,V)
   
   # print solution
   File("up.pvd") << up
@@ -342,28 +305,28 @@ if __name__ == "__main__":
 
   elif(sys.argv[1]=="-root"):
     root = sys.argv[2]
-    fileMesh = root+"_mesh.xml.gz"
-    fileSubdomains= root+"_subdomains.xml.gz"
-    filePotential= root+"_values.xml.gz"
+    problem.fileMesh = root+"_mesh.xml.gz"
+    problem.fileSubdomains= root+"_subdomains.xml.gz"
+    problem.filePotential= root+"_values.xml.gz"
     import os.path
     if(os.path.isfile(filePotential)==0):
-       filePotential= "none";
+       problem.filePotential= "none";
        print "Didn't see electrostatic potential..."
 
-    Run(fileMesh,fileSubdomains,filePotential="none")
+    Run(problem)
 
   elif(len(sys.argv)==3):
     print "In run mode"
-    fileMesh = sys.argv[1]
-    fileSubdomains= sys.argv[2]
-    Run(fileMesh,fileSubdomains,filePotential="none")
+    problem.fileMesh = sys.argv[1]
+    problem.fileSubdomains= sys.argv[2]
+    Run(problem)
 
   elif(len(sys.argv)==4):
     print "In run mode"
-    fileMesh = sys.argv[1]
-    fileSubdomains= sys.argv[2]
-    filePotential= sys.argv[3]
-    Run(fileMesh,fileSubdomains,filePotential)
+    problem.fileMesh = sys.argv[1]
+    problem.fileSubdomains= sys.argv[2]
+    problem.filePotential= sys.argv[3]
+    Run(problem)
 
   else:
     raise RuntimeError(msg)
