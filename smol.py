@@ -76,10 +76,15 @@ def ComputeKon(problem,results):
 
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(parms.active_site_marker),
                                 exterior_facet_domains = problem.subdomains)
-    print "boundary fl %f" % boundary_flux_terms
     kon = boundary_flux_terms / float(parms.bulk_conc);
 
-    print "My kon is %f" % (kon)
+    print "Warning: using correction until i get units right. "
+    print "Based on smol for sphere w/o charge. "
+    print "Is something wrong w scaling by bulk conc?"
+    print "Check electro too"
+    correction = -64964
+    kon = kon * correction
+    print "kon: %f" % (kon)
 
     results.kon = kon
     results.Jp  = Jp   
@@ -99,18 +104,18 @@ def InterfaceFunction(x,on_boundary):
 # ALthough we label this as an active site in the mesh, the active site is technically at the 'end' of the binding channel 
 # and is handled in the interior problem. If exteriorProblem is defined, then we pass in the boundary condition at the 
 # interface via interiorProblem  
-def ProblemDefinition(fileMesh,fileSubdomains,filePotential,exteriorProblem=0)
+def ProblemDefinition(problem,exteriorProblem=0,boundaries=0):
   ## load data
   # coordinates
-  mesh = Mesh(fileMesh);
+  mesh = Mesh(problem.fileMesh);
 
   # load subdomains 
-  subdomains = MeshFunction("uint", mesh, fileSubdomains) 
+  subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
 
   # Load and apply electrostatic potential values to mesh 
   V = FunctionSpace(mesh, "CG", 1)
-  if(filePotential!="none"):
-    psi = Function(V,filePotential);
+  if(problem.filePotential!="none"):
+    psi = Function(V,problem.filePotential);
     psi.vector()[:]=0;
   else:
     psi = Function(V)
@@ -130,6 +135,15 @@ def ProblemDefinition(fileMesh,fileSubdomains,filePotential,exteriorProblem=0)
   #  bc0 = DirichletBC(V,InterfaceFunction,subdomains,parms.active_site_marker)
 
   bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
+
+  # override with definition 
+  if(boundaries!=0):
+    print "Overriding marked boundaries with user definition (test with testboundaries.py)"
+    #activeSite = bound.ActiveSite()
+    #bulkBoundary = bound.BulkBoundary()
+    #molecularBoundary = bound.MolecularBoundary()
+    bc0 = DirichletBC(V,Constant(parms.active_site_absorb),boundaries.activeSite)
+    bc1 = DirichletBC(V,Constant(parms.bulk_conc),boundaries.bulkBoundary)
  
   bcs = [bc0,bc1]
  
@@ -169,10 +183,7 @@ def SolveSteadyState(problem):
     F = parms.D * intfact*inner(grad(u), grad(v))*dx
 
     # apply Neumann cond 
-    # PKH - check w Fenics example, since it seems like ds() no longer needed?
-    # (because I already marked the subdomain)
-    # PKH where is 'subdomain' used that I defined earlier? 
-    # since noflux --> boundary==0, don't need to include this 
+    # since noflux --> boundary==0, don't need to include this?
     #f_molecular_boundary = noflux_molecular_boundary
     #F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
@@ -203,10 +214,11 @@ def SolveSteadyState(problem):
 
 ## Domain
 
-def Run(problem,exteriorProblem=0):
+# boundaries - override markers used in mesh 
+def Run(problem,exteriorProblem=0,boundaries=0):
 
   # get stuff 
-  problem = ProblemDefinition(problem,exteriorProblem)
+  problem = ProblemDefinition(problem,exteriorProblem=exteriorProblem,boundaries=boundaries)
 
   # solve PDE
   results= SolveSteadyState(problem)
@@ -234,7 +246,7 @@ def Debug():
     1
   ## NOT SUPPORTED YET 
   if(apbs==1):
-    problem = ProblemDefinition(fileMesh,fileSubdomains,filePotential)
+    ProblemDefinition(problem)
 
   # sphere example
   elif(gamer==1):
@@ -281,6 +293,21 @@ def SimpleTest():
   
   return mesh
 
+
+def Validation():
+  root = "/home/huskeypm/scratch/born/born"
+  problem.fileMesh = root+"_mesh.xml.gz"
+  problem.fileSubdomains= root+"_subdomains.xml.gz"
+  problem.filePotential= "none"
+  result = Run(problem)
+  
+  R = 8.0 # [Ang]
+  R = R / 10000  # [um]
+
+  kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_M
+  print " kana: %e R:%e D:%f " % (kon_analy,R,parms.D) #,parms.um3_to_M)
+  print "kon_anal %e pred %e " % (kon_analy, result.kon)
+
 #
 # PDE
 # 0 = del D [del - 
@@ -294,6 +321,8 @@ def SimpleTest():
 
 if __name__ == "__main__":
   msg="smol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>"
+
+
 
   import sys
   if len(sys.argv) < 2:  
@@ -309,7 +338,7 @@ if __name__ == "__main__":
     problem.fileSubdomains= root+"_subdomains.xml.gz"
     problem.filePotential= root+"_values.xml.gz"
     import os.path
-    if(os.path.isfile(filePotential)==0):
+    if(os.path.isfile(problem.filePotential)==0):
        problem.filePotential= "none";
        print "Didn't see electrostatic potential..."
 
@@ -327,6 +356,9 @@ if __name__ == "__main__":
     problem.fileSubdomains= sys.argv[2]
     problem.filePotential= sys.argv[3]
     Run(problem)
+  
+  elif(sys.argv[1] == "validate"):
+    Validation()
 
   else:
     raise RuntimeError(msg)

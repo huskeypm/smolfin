@@ -1,9 +1,35 @@
 # Pete Kekenes-Huskey
 import numpy as np
-#from params import *
-import params 
 from params import * # must do this for class
 parms = params()
+
+# 
+from dolfin import SubDomain, DOLFIN_EPS
+class NeumannBoundaryHack(SubDomain): 
+  def inside(self, x, on_boundary):
+    return x[0] < 5 + DOLFIN_EPS and on_boundary
+    #return on_boundary
+
+# bit confused her, think all markers are being stored in subdmains, but 
+# we are doing somethin separete for subdomains here as well?
+def check_facets(mesh, cellmarkers):
+    # NOT SURE IF WORKING 
+
+    #from dolfin import cells, facets,mesh
+    from dolfin import cells, facets, MeshFunction, File
+    md = mesh.domains()
+    facet_markers = md.markers(2)
+    
+    # 2 for top dim 2 (facets)
+    unmarked=0
+    for j, cell in enumerate(cells(mesh)):
+       for i, face in enumerate(facets(cell)):
+           marker = int(cellmarkers[j,i])
+           if(marker==0): 
+             unmarked= unmarked+1
+             facet_markers.set_value(cell.index(), i, parms.molecular_boundary_marker)
+
+    print "Found %d unmarked facets. NOT DOING ANYTHING RIGHT NOW" % unmarked
 
 def mark_neumann_facets(mesh, cellmarkers):
     #from dolfin import cells, facets,mesh
@@ -22,6 +48,11 @@ def mark_neumann_facets(mesh, cellmarkers):
           (subdomains.array()==parms.active_site_marker).sum()
 
     File("subdomains.pvd") << subdomains
+
+    # TESTING 
+    # check for errors 
+    #numUnmrked = (subdomains.array()==0).sum()
+    #print "Num unmarked enetries:"% numUnmrked 
     
     return subdomains
 
@@ -142,8 +173,6 @@ def generate_dolfin_mesh(coordinates, cells):
     mesh_cells.flags.writeable = True
     mesh_cells[:] = cells
 
-    print "I think cells need to be marked with '1' here"
-
     # Return mesh
     return mesh
 
@@ -173,12 +202,14 @@ def write_dolfin_files(filename, mesh):
     # write cell marker file 
     from dolfin import CellFunction
     cells = CellFunction("uint", mesh)
+    cells.set_all(1) # not sure if this is right 
     File(filename+"_cells.xml.gz") << cells       
 
 
 
 # no mark skips the domain marking, etc (workaround for a local problem)
 def read_and_mark(filename, nomark=0):
+    from dolfin import FacetFunction,MeshFunction, DirichletBC, Constant, FunctionSpace
     coordinates, cells, cellmarkers, vertmarkers = read_mcsf_file(filename)
 
     ## 
@@ -186,19 +217,67 @@ def read_and_mark(filename, nomark=0):
     if (nomark==1):
       print "WARNING: only returning mesh for debugfgin purposes"
       return(mesh)
-    
+
+    print "Need to verify meshing is correct again.."
+
     # generate neumann/dirichlet here
     subdomains = mark_neumann_facets(mesh, cellmarkers)
     #mark_dirichlet_vertices(mesh, vertmarkers)
+    #check_facets(mesh,cellmarkers)
+    #sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
+    #numUnmrked = (subdomains.array()==0).sum()
+    #print "sdfs %d" % numUnmrked
 
-    # TEST!!      
-    from dolfin import MeshFunction, DirichletBC, Constant, FunctionSpace
+    # mark all boundaries 
+    fixhack=0
+    if(fixhack==1):
+      from dolfin import UnitCube
+      mesh = UnitCube(8,8,8)
+      print "Forcing boundaries to have value at exterior [overridden by file]"
+      neumann_boundary = NeumannBoundaryHack() 
+      exterior_facet_domains = FacetFunction("uint", mesh) 
+      exterior_facet_domains.set_all(parms.unmarked_marker) 
+      neumann_boundary.mark(exterior_facet_domains, parms.molecular_boundary_marker)
+
+
+
     V = FunctionSpace(mesh, "CG", 1)
 
     # marking is actually done inside smo.py
     #bc0 = DirichletBC(V, Constant(active_site_absorb), subdomains,active_site_marker)
 
+    test =1 
+    from view import PrintBoundary
+    if(test==1):
+      # surface w no marker
+      bc0 = DirichletBC(V, Constant(1), subdomains,parms.unmarked_marker )
+      PrintBoundary(mesh, bc0,file="unmarked")
+      # active site
+      bc0 = DirichletBC(V, Constant(1), subdomains,parms.active_site_marker)
+      PrintBoundary(mesh, bc0,file="active")
+      # molecular boundary 
+      bc0 = DirichletBC(V, Constant(1), subdomains,parms.molecular_boundary_marker)
+      PrintBoundary(mesh, bc0,file="molecular")
+      # outer_boundary
+      bc0 = DirichletBC(V, Constant(1), subdomains,parms.outer_boundary_marker)
+      PrintBoundary(mesh, bc0,file="outer")
+      #quit()
+
+
+    #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
+    # subdomains.set_all(3) # mark facets as sub domain 3
     write_dolfin_files(filename.replace(".m", ""), mesh)
+
+    # test (this works) 
+    #from dolfin import Mesh, FunctionSpace, DirichletBC
+    #fileMesh  ="p.pqr.output.out_mesh.xml.gz"
+    #mesh = Mesh(fileMesh);
+    #V = FunctionSpace(mesh, "CG", 1)
+    #fileSubdomains="p.pqr.output.out_subdomains.xml.gz"
+    #subdomains = MeshFunction("uint", mesh, fileSubdomains)
+    #bc1 = DirichletBC(V,Constant(bulk_conc),subdomains,outer_boundary_marker)
+    ##bc1 = DirichletBC(V, Constant(1), subdomains,active_site_marker)
+    #PrintBoundary(mesh,bc1,file="test.pvd")
 
 
     #return mesh,coordinates

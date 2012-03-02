@@ -1,7 +1,9 @@
 
 import numpy as np
+from params import *
 
-beta = 0.6 # 1/kT
+parms = params()
+
 
 class empty:pass
 
@@ -15,14 +17,14 @@ def DiffusionConst(x):
 def Sigma(x):
   # R = 1 [nm]
   R = 1
-  area = 4 * pi * R^R
+  area = 4 * np.pi * R*R
   sigma_x = np.ones( np.size(x)) * area 
   return(sigma_x)
 
 ## PMF 
 def PMFTerm(xrange,problem):
   # get data
-  dat = numpy.loadtxt(problem.filePMF);
+  dat = np.loadtxt(problem.filePMF);
   x = dat[:,0]
   y = dat[:,1]
 
@@ -35,7 +37,7 @@ def PMFTerm(xrange,problem):
   problem.x = x
   problem.V_x = V_x
 
-  boltz = exp(beta * V_x) 
+  boltz = np.exp(parms.beta * V_x) 
   problem.boltz = boltz
 
   
@@ -45,8 +47,8 @@ def Run(problem):
   xrange = np.array([problem.x0,problem.xL])
   PMFTerm(xrange,problem)
   
-  problem.D_x = DiffusionConst(x)
-  problem.Sigma_x = Sigma(x)
+  problem.D_x = DiffusionConst(problem.x)
+  problem.Sigma_x = Sigma(problem.x)
   
   integ = problem.boltz / (problem.D_x * problem.Sigma_x)
   
@@ -55,15 +57,18 @@ def Run(problem):
   # trapz(y,x)
   results = empty()
   # for consistency, defining kpmf as 1/IntegralTerm in 4.1
-  integral = trapz(integ,x)
+  integral = trapz(integ,problem.x)
   results.invkPMF= integral
+  print "Interior integral %f " % integral
   
   # provide Boltzman distribution at boundary x=L (channel mouth location)
   # note: be sure that this is a boltzman fact, as is the quantity in PMFTerm
-  results.prob_x = exp(-beta * problem.V_x)
+  results.prob_x = np.exp(-parms.beta * problem.V_x)
+  xL = len(problem.x)-1
   results.prob_xL= results.prob_x[ xL ]
   results.sigma_xL= problem.Sigma_x[ xL ]
-  results.diff_xL= problem.Diff_x[ xL ]
+  results.D_xL= problem.D_x[ xL ]
+  results.V_xL= problem.V_x[ xL ]
  
   return (results)
   
