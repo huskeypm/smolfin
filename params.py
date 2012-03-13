@@ -5,9 +5,9 @@ from dolfin import Constant
 class params:
   def __init__(self):
     # CONVERTSION
-    self.um3_to_M = 6*(10**8)  # um^3 into M # TODO Recompute exatcly 
+    self.um3_to_M = 602214150.0  # um^3 into M (1 cubic micron = 1.0 x 10-15 liter, times Avogadro's number)
   # markers
-    self.unmarked_marker = 1; # Default marker 
+    self.unmarked_marker = 6; # Default marker - was '1' 
     self.active_site_marker = 1; # verified (red) 
     self.outer_boundary_marker = 5 # Verified on 120104_update.tex (green)
     self.molecular_boundary_marker = 4 # Verified (blue) 
@@ -18,7 +18,7 @@ class params:
     self.bulk_conc = Constant(1.0)
     self.D = 100.0 # diffusion constant, [um^2/s]
     self.beta = 1/0.693 # 1/kT, [kcal/mol]
-    self.valence = Constant(2)
+    self.valence = 2.0   # why do I need a constant? TODO  Constant(2)
 
     # temporary
     self.temp_outerR = 5.0

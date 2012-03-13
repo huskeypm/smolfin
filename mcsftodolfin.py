@@ -1,7 +1,16 @@
 # Pete Kekenes-Huskey
+
+#
+# Revisions
+# 120312 added function to check mesh dimensions to verify agreement with APBS 
+#
+
+
 import numpy as np
 from params import * # must do this for class
 parms = params()
+
+class empty:pass
 
 # 
 from dolfin import SubDomain, DOLFIN_EPS
@@ -205,15 +214,84 @@ def write_dolfin_files(filename, mesh):
     cells.set_all(1) # not sure if this is right 
     File(filename+"_cells.xml.gz") << cells       
 
+# checks that mesh is centered and of appropriate dimensions (to ensure 
+# we are using appropriate scale and FE mesh matches with APBS FD mesh  
+def do_checks(mesh,subdomains):
+    from dolfin import DirichletBC, Constant, FunctionSpace, Function, File
+
+
+
+    ## get all boundaries corresponding to molecular 
+    V = FunctionSpace(mesh, "CG", 1)
+    markedall = Function(V)
+
+    # active site
+    print "Checking active site..."
+    bc0 = DirichletBC(V, Constant(1), subdomains,parms.active_site_marker)
+    marked0 = Function(V)
+    bc0.apply(marked0.vector())
+    markedall.vector()[:] = markedall.vector()[:] + marked0.vector()[:]
+    
+    # molecular boundary 
+    print "Checking molecule boundary ... (may be zero)"
+    bc1 = DirichletBC(V, Constant(1), subdomains,parms.molecular_boundary_marker)
+    marked1 = Function(V)
+    bc1.apply(marked1.vector())
+    markedall.vector()[:] = markedall.vector()[:] + marked1.vector()[:]
+
+    # debug
+    #File("test.pvd") << markedall
+ 
+    ## get limits of molecule  
+    
+    # mesh coords
+    coor = mesh.coordinates()
+
+    # find all indices where molecule exists
+    molidx = np.where(markedall.vector()[:] > 0)
+
+    # extremes
+    mol = empty()
+    mol.coor = coor[molidx]
+    mol.min = np.min(mol.coor,axis=0)
+    mol.max = np.max(mol.coor,axis=0)
+    mol.dim = mol.max - mol.min 
+
+    # check if range contains (0,0,0) which indicates we pass through origin
+    # I check for this by noting that the min must be < 0, and max > 0, therefore
+    # product of min/max s.b. negative for all axes
+    passing = np.size(np.where(mol.min * mol.max < 0))
+    if(passing < 3):
+      print "WARNING: It appears that the grid does not pass through origin. Please verify and recenter if need be"
+
+    # check size of molecule 
+    print "Molecule size [A] is "
+    print mol.dim
+    print "Compare this with original molecule. If incorrect, rescale mesh using XXX and repeat conversion"
+
+    
+
+
 
 
 # no mark skips the domain marking, etc (workaround for a local problem)
-def read_and_mark(filename, nomark=0):
+# rescaleCoor requests isotropic scaling of the mesh coordinates (meshNew = meshOld * rescaleCoor)
+def read_and_mark(filename, nomark=0,rescaleCoor=0):
     from dolfin import FacetFunction,MeshFunction, DirichletBC, Constant, FunctionSpace
+
+    # read mesh 
     coordinates, cells, cellmarkers, vertmarkers = read_mcsf_file(filename)
 
-    ## 
+    # rescale mesh 
+    if(rescaleCoor > 0):
+      print "Rescaling coordinates of molecule by %f" % rescaleCoor
+      coordinates = coordinates * rescaleCoor
+      
+    
+    # create dolfin 
     mesh = generate_dolfin_mesh(coordinates, cells)
+
+    # debuf 
     if (nomark==1):
       print "WARNING: only returning mesh for debugfgin purposes"
       return(mesh)
@@ -263,6 +341,8 @@ def read_and_mark(filename, nomark=0):
       PrintBoundary(mesh, bc0,file="outer")
       #quit()
 
+    do_checks(mesh,subdomains)
+
 
     #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
     # subdomains.set_all(3) # mark facets as sub domain 3
@@ -288,10 +368,14 @@ if __name__ == "__main__":
     ## read data 
     filename = r"xxxx/x.m"
     import sys
-    if len(sys.argv) != 2:
-        raise RuntimeError("expected an mcsf file as second argument")
+    if len(sys.argv) < 2:
+        raise RuntimeError("expected an mcsf file as second argument (or optional rescale value as third arg)")
     filename = sys.argv[1]
-    mesh = read_and_mark(filename)
+
+    if(sys.argv==3):
+      mesh = read_and_mark(filename)
+    else:
+      mesh = read_and_mark(filename,rescaleCoor=sys.argv[2])
     
 #mcsffile = "p.pqr.output.all.m"
 #coordinates,cells, markers = read_mcsf(mcsffile)

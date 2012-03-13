@@ -25,7 +25,9 @@ def IsNearActiveSite(x):
 def IsNearOuter(x):
     r = np.linalg.norm(dominantCentr[coordIdx] - x[coordIdx])
     isOnOuter= r  > (outerR - DOLFIN_EPS)
-    #print "z %f topZ %f is %d" % (x[2],topZ,isOnOuter)
+    #print x
+    #print dominantCentr[coordIdx] - x[coordIdx] 
+    #print "r %f R %f [%f,%f] is %d" % (r,outerR,x[0],x[1],isOnOuter)
     return isOnOuter
 
 # marks active site s region near active site location 
@@ -46,7 +48,14 @@ class MolecularBoundary(SubDomain):
   def inside(self,x,on_boundary):
     isNotNearActiveSite = (IsNearActiveSite(x)==0)
     isNotOnOuter= (IsNearOuter(x)==0)                
-    #print x
-    #print "as %d t %d " % (isNotNearActiveSite,isNotOnOuter)
-    return isNotNearActiveSite*isNotOnOuter*on_boundary
+    isMol = isNotNearActiveSite*isNotOnOuter*on_boundary
+    if (on_boundary & isNotOnOuter):
+      print IsNearActiveSite(x)
+      print IsNearOuter(x)
+      print x
+      print "as %d t %d tot %d " % (isNotNearActiveSite,isNotOnOuter,isMol)
+      
+
+
+    return isMol
   

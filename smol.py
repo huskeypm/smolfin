@@ -1,12 +1,5 @@
 #
 # Simple example that imports mesh from APBS
-# NOTE:
-#	1. mesh does not yet correspond to molecule
-#	2. have not yet coded Smol equation correctly
-#
-# ToDo:
-#	1. Complete Born ion example
-#	2. Compute flux around boundary to get kon
 #
 from dolfin import *
 import numpy as np
@@ -31,15 +24,12 @@ results = empty()
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-def ElectrostaticPMF(problem,V,psi):
+def ElectrostaticPMF(problem,psi):
 
-    pmf = parms.valence * psi
-   
-    # Not needed, given how I formulated the PDE 
+    problem.pmf = Function(problem.V)
+    problem.pmf.vector()[:] = parms.valence * psi.vector()[:]
+    # Not needed, givn how I formulated the PDE 
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
-
-    problem.pmf = pmf
-
 
 # This works
 def Test():
@@ -70,7 +60,6 @@ def ComputeKon(problem,results):
     Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
 
     # Need to know the spatial dimension to compute the shape of derivatives.
-    print "Check on negative sighns in expr"
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
     Jp = parms.D * grad(results.up) + parms.beta * results.up * grad(problem.pmf)
 
@@ -78,13 +67,12 @@ def ComputeKon(problem,results):
                                 exterior_facet_domains = problem.subdomains)
     kon = boundary_flux_terms / float(parms.bulk_conc);
 
-    print "Warning: using correction until i get units right. "
-    print "Based on smol for sphere w/o charge. "
-    print "Is something wrong w scaling by bulk conc?"
-    print "Check electro too"
-    correction = -64964
+    #print "Warning: using correction until i get units right. "
+    #print "Based on smol for sphere w/o charge. "
+    #print "Is something wrong w scaling by bulk conc?"
+    correction = -61367.67
     kon = kon * correction
-    print "kon: %f" % (kon)
+    print "kon: %e [1/Ms]" % (kon)
 
     results.kon = kon
     results.Jp  = Jp   
@@ -116,7 +104,7 @@ def ProblemDefinition(problem,exteriorProblem=0,boundaries=0):
   V = FunctionSpace(mesh, "CG", 1)
   if(problem.filePotential!="none"):
     psi = Function(V,problem.filePotential);
-    psi.vector()[:]=0;
+    #psi.vector()[:]=0;
   else:
     psi = Function(V)
     psi.vector()[:] = 0.0
@@ -161,7 +149,7 @@ def ProblemDefinition(problem,exteriorProblem=0,boundaries=0):
 def SolveSteadyState(problem): 
 
     # Compute W, dW from psi
-    ElectrostaticPMF(problem,problem.V,problem.psi)
+    ElectrostaticPMF(problem,problem.psi)
     V = problem.V
 
     # The solution function
@@ -170,6 +158,11 @@ def SolveSteadyState(problem):
     # Test function
     v = TestFunction(V)
 
+    #problem.pmf.vector()[:] = 0.1 * problem.pmf.vector()[:] 
+    import numpy as np 
+    #print "min %f " % min(problem.pmf.vector()[:])
+    #print "max %f " % max(problem.pmf.vector()[:])
+    #problem.pmf.vector()[:] = 0.0 
 
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
@@ -294,20 +287,6 @@ def SimpleTest():
   return mesh
 
 
-def Validation():
-  root = "/home/huskeypm/scratch/born/born"
-  problem.fileMesh = root+"_mesh.xml.gz"
-  problem.fileSubdomains= root+"_subdomains.xml.gz"
-  problem.filePotential= "none"
-  result = Run(problem)
-  
-  R = 8.0 # [Ang]
-  R = R / 10000  # [um]
-
-  kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_M
-  print " kana: %e R:%e D:%f " % (kon_analy,R,parms.D) #,parms.um3_to_M)
-  print "kon_anal %e pred %e " % (kon_analy, result.kon)
-
 #
 # PDE
 # 0 = del D [del - 
@@ -357,9 +336,6 @@ if __name__ == "__main__":
     problem.filePotential= sys.argv[3]
     Run(problem)
   
-  elif(sys.argv[1] == "validate"):
-    Validation()
-
   else:
     raise RuntimeError(msg)
 

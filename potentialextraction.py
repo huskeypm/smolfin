@@ -213,7 +213,11 @@ class Vgrid:
                        oz = float(words[3])
                    else: 
                        try:
-                           for word in words: data.append(float(word))
+                           for word in words: 
+                             #print "PKH"
+                             #print word
+                             #print "-->%f %e " % (float(word),float(word))
+                             data.append(float(word))
                        except ValueError, details:  pass
        if len(data) != (nx*ny*nz):
            errstr = "Read %d values, expected %d!" % (len(data), (nx*ny*nz))

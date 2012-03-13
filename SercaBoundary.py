@@ -16,11 +16,14 @@ def IsNearActiveSite(x):
     r = np.linalg.norm(activeSiteLoc-x)
     isNearActiveSite = r < (activeSiteR + DOLFIN_EPS)
     #print x
+    #print activeSiteLoc
     #print "r %f activeSiteR %f isNearActiveSite %d" % (r,activeSiteR,isNearActiveSite)
+
     return isNearActiveSite
 
 def IsNearTop(x):
     isOnTop= x[2] > (topZ - DOLFIN_EPS)
+    #print x
     #print "z %f topZ %f is %d" % (x[2],topZ,isOnTop)
     return isOnTop
 

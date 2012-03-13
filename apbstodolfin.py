@@ -111,6 +111,7 @@ def interpolate_to_grid(coordinates, values):
     line = griddata(coordinates, values, (z),method='linear')
 
 
+# PKH validation - verified files are being read correctly from APBS 
 def read_fd_apbs_file(apbsfilename):
     print "Reading APBS file %s" % apbsfilename
     if not ".dx" in apbsfilename:
@@ -129,6 +130,10 @@ def read_fd_apbs_file(apbsfilename):
     vgrid = Vgrid(dims, spac, origin, data)
     vgrid.readOpenDX(file)
     file.close()
+
+    #print "die for now"
+    #print data[:]
+    #quit()
 
     # assign to numpy ar
     nx = vgrid.dims[0]
@@ -164,9 +169,13 @@ def read_fd_apbs_file(apbsfilename):
             for k in range(1, (nz-1)):
                 z = zmin + float(k)*hz
                 coordinates.append([x,y,z])
+                #print "%e " % (vgrid.value((x, y, z)))
                 values.append(vgrid.value((x, y, z)))
 
     print "Read %d coords " % len(coordinates)
+    #print values
+    print "Potential values [kT/e] min (%e) max (%e) " % (min(values), max(values))
+    #quit()
 
     return(coordinates,values)
 

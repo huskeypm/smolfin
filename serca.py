@@ -8,7 +8,7 @@ import channel_smol as channel
 
 ## boundaries 
 #from TroponinBoundary import *
-import TroponinBoundary as tncboundaries
+import SercaBoundary as sercaboundaries
 
 #bound = TroponinBoundary()
 parms = params()
@@ -27,19 +27,25 @@ if __name__ == "__main__":
       raise RuntimeError(msg)
 
   elif(sys.argv[1]=="run"):
-    root = "/home/huskeypm/scratch/troponin/marked"
+    root = "/home/huskeypm/scratch/serca_mole/test2"
     problem.fileMesh = root+"_mesh.xml.gz"
     problem.fileSubdomains= root+"_subdomains.xml.gz"
     problem.filePotential= root+"_values.xml.gz"
+    problem.filePotential= "none"
 
     # provble.FilePMF="/home/huskeypm/sources/dolfin_smol/example/out.pmf"
     problem.filePMF = "/home/huskeypm/sources//dolfin_smol/example/pmf/out.pmf";
     #problem.filePMF = sys.argv[3]
 
+    # borrow values from testboundaries
+    sercaboundaries.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
+    sercaboundaries.activeSiteR   = 10.0
+    sercaboundaries.topZ = 0.0
+
+
      
-    boundaries.activeSite = tncboundaries.ActiveSite()
-    boundaries.bulkBoundary = tncboundaries.BulkBoundary()
+    boundaries.activeSite = sercaboundaries.ActiveSite()
+    boundaries.bulkBoundary = sercaboundaries.BulkBoundary()
     #smol.Run(problem, boundaries=boundaries)
-    smol.Run(problem)
-    # channel.RunChannelSmol(problem)
+    channel.RunChannelSmol(problem)
 
