@@ -92,18 +92,33 @@ def InterfaceFunction(x,on_boundary):
 # ALthough we label this as an active site in the mesh, the active site is technically at the 'end' of the binding channel 
 # and is handled in the interior problem. If exteriorProblem is defined, then we pass in the boundary condition at the 
 # interface via interiorProblem  
-def ProblemDefinition(problem,exteriorProblem=0,boundaries=0):
+import sys
+import os.path
+def ProblemDefinition(problem,boundaries=0):
   ## load data
   # coordinates
-  mesh = Mesh(problem.fileMesh);
+  if(os.path.exists(problem.fileMesh)==0):
+    msg = "fileMesh %s does not exist" % problem.fileMesh
+    raise RuntimeError(msg)
+  else:
+    mesh = Mesh(problem.fileMesh);
 
   # load subdomains 
-  subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
+  if(os.path.exists(problem.fileSubdomains)==0):
+    msg = "fileSubdomains %s does not exist" % problem.fileSubdomains
+    raise RuntimeError(msg)
+  else:
+    subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
 
   # Load and apply electrostatic potential values to mesh 
   V = FunctionSpace(mesh, "CG", 1)
   if(problem.filePotential!="none"):
-    psi = Function(V,problem.filePotential);
+    if(os.path.exists(problem.filePotential) == 0):
+      msg = "filePotential %s does not exist" % problem.filePotential 
+      raise RuntimeError(msg)
+
+    else:
+      psi = Function(V,problem.filePotential);
     #psi.vector()[:]=0;
   else:
     psi = Function(V)
@@ -146,7 +161,7 @@ def ProblemDefinition(problem,exteriorProblem=0,boundaries=0):
 
 
 
-def SolveSteadyState(problem): 
+def SolveSteadyState(problem,pvdFileName="up.pvd"): 
 
     # Compute W, dW from psi
     ElectrostaticPMF(problem,problem.psi)
@@ -197,9 +212,9 @@ def SolveSteadyState(problem):
     results.up = up
 
     ## print solution
-    File("solution.pvd") << up
+    # File("solution.pvd") << up
     #plot(up, interactive=True)
-    File("up.pvd") << results.up
+    File(pvdFileName) << results.up
 
  
     #problem.pmf= pmf # shouldn't go here 
@@ -208,13 +223,13 @@ def SolveSteadyState(problem):
 ## Domain
 
 # boundaries - override markers used in mesh 
-def Run(problem,exteriorProblem=0,boundaries=0):
+def Run(problem,boundaries=0,pvdFileName="up.pvd"):
 
   # get stuff 
-  problem = ProblemDefinition(problem,exteriorProblem=exteriorProblem,boundaries=boundaries)
+  problem = ProblemDefinition(problem,boundaries=boundaries)
 
   # solve PDE
-  results= SolveSteadyState(problem)
+  results= SolveSteadyState(problem,pvdFileName=pvdFileName)
   
   # compute something
   ComputeKon(problem, results)    

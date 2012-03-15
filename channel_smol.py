@@ -1,6 +1,10 @@
 
+#
+# This script computes kon within binding channel 
+#
+
 import smol
-import interiorProblem
+import InteriorProblemMaster
 import numpy as np
 from params import * # must do this for class
 
@@ -12,30 +16,20 @@ class empty:pass
  
 # divided into interior (PMF-driven) and exterior (diffusion driven) problems
 # This script primarily deals with interior problem and passes exterior problem to smol 
-def RunChannelSmol(problem): 
-  ## inputs
-  problem.x0=0
-  problem.xL=25
+# useDefault - see 'InteriorProblemMaster.Run()'
+def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0): 
+
   invKappa0 = 0;    # (intrinsic reaction rate)^-1   # invKappa=0 implies IRR is infinitely gast
- 
-  ## PMF domain 
-  print "Assuming values for range of x values over which pmf is defined"
-  interiorResult = interiorProblem.Run(problem)
-  print "kpmf %f " % interiorResult.invkPMF
-
-  # need to form (2.10) Berez using quantities from interior problem and exterior problem
-  # WARNING - need to make sure area of binding tunnel interface on the exterior problem 
-  # matches that at the interior problem
-  # if we asume steady state, I think we can use (2.8) at x=L for g_1(L,t) in (2.10)
-  g1_L0 = interiorResult.sigma_xL * np.exp(-parms.beta*interiorResult.V_xL)   # g1(x=L,t=0)
-  # binding Channel Term in (2.10) [external PMF due to electrostatics handled elsewhere) 
-  bindChannelTerm = g1_L0 / (interiorResult.sigma_xL * np.exp(-parms.beta*interiorResult.V_xL) )
-
-  problem.bindChannelTerm = bindChannelTerm 
-
+  ## xterior domain 
+  interiorResult = InteriorProblemMaster.Run(problem)
 
   ## exterior domain 
-  exteriorResult = smol.Run(problem,exteriorProblem=1)
+  if(results==0):
+    exteriorResult = smol.Run(problem,boundaries=boundaries,pvdFileName=pvdFileName)
+  else:
+    print "Stored result used instead of copmpuyting smol"
+    exteriorResult = results
+
   # defined in 4.1 Berez 
   invkE = 1/exteriorResult.kon
   print "kE  %f" % exteriorResult.kon
@@ -44,11 +38,14 @@ def RunChannelSmol(problem):
   ## kon 
   # Berez 4.1, assuming that Kappa0 >> s(0) e(-beta V(0))
   invkss = invkE + invKappa0 + interiorResult.invkPMF
-  result = empty()
-  result.kss = 1/invkss
-  print "kss %f" % result.kss
+  
+  # technical should be copied to a new object (TODO)
+  interiorResult.kon = exteriorResult.kon
+  interiorResult.kss = 1/invkss
+  print "kss %f" % interiorResult.kss
+  print "xL %f " % interiorResult.xL
    
-  return result 
+  return interiorResult 
 
 
 # pmf - refers to output from WHAM 
@@ -69,5 +66,5 @@ if __name__ == "__main__":
     problem.filePMF = "/home/huskeypm/sources//dolfin_smol/example/pmf/out.pmf";
     #problem.filePMF = sys.argv[3]
 
-    RunChannelSmol(problem)
+    Run(problem)
 
