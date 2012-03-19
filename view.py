@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+class empty:pass
+
 def PrintBoundary(mesh, boundary,file="marked"):
   from dolfin import FunctionSpace, Function, File, plot
   V = FunctionSpace(mesh, "CG", 1)
@@ -17,11 +20,40 @@ def PrintBoundary(mesh, boundary,file="marked"):
   print "Printing %s for viewing" % file
   File(file) << marked
 
+def JournalFigs():
+    # size in publication 
+    # single col - 3.085 inches 
+    w = 3.085
 
-def plotslice(problem,result,title="no title",fileName="slice.png"):
-    plotslicegeneral(problem.mesh.coordinates(),result.up.vector(),title=title,fileName=fileName)
+    # dpi 
+    dpi = 300
 
-def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png"):
+    # golden ratio
+    gr = 1.61803
+    h = w/gr
+
+    # make fig 
+    journalfig = empty()
+    journalfig.fig=plt.figure(figsize=(4*w,4*h),dpi=dpi)
+    journalfig.fontSize=30
+ 
+
+    ax = plt.gca()
+    fontsize = 18
+    for tick in ax.xaxis.get_major_ticks():
+      tick.label1.set_fontsize(fontsize)
+
+    for tick in ax.yaxis.get_major_ticks():
+      tick.label1.set_fontsize(fontsize)
+    
+    return (journalfig)
+    
+
+
+def plotslice(problem,result,title="no title",fileName="slice.png",show=0):
+    plotslicegeneral(problem.mesh.coordinates(),result.up.vector(),title=title,fileName=fileName,show=show)
+
+def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0):
     import numpy as np
     #meshcoor = problem.mesh.coordinates()
     
@@ -40,14 +72,18 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png"):
     x2 = np.linspace(-range,range,numpt)
     X1,X2 = np.meshgrid(x1,x2)
 
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(14,10))
-    gFontSize = 15
-    plt.title(title)
-    plt.ylabel("y [\AA]",fontsize=gFontSize)
-    plt.xlabel('z [\AA]',fontsize=gFontSize)
+    
+
+    #fig = plt.figure(figsize=(14,10))
+    journalfig = JournalFigs() 
+    plt.title(title,fontsize=journalfig.fontSize)
+    plt.ylabel("y [$\AA$]",fontsize=journalfig.fontSize)
+    plt.xlabel('z [$\AA$]',fontsize=journalfig.fontSize)
     plt.pcolormesh( X1.T,X2.T,slice.T, shading='flat' )
     plt.colorbar()
+    if(show==1):
+      plt.show()
+
     F = plt.gcf()
     F.savefig(fileName)
     print "Plotted %s" % fileName
