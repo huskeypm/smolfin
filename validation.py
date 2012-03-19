@@ -62,9 +62,9 @@ def ValidateGatedChannel(kon_ext):
   plt.title("Gating ")
   plt.ylabel("$k_G$ [1/Ms]",fontsize=gFontSize)
   plt.xlabel('$V_a$ [kcal/mol]',fontsize=gFontSize)
-  plt.plot(Vas,k_cs, 'k-', color='black')
-  plt.plot(Vas,k_ss, 'k--', color='black')
-  plt.plot(Vas,k_if, 'k.-', color='black')
+  plt.plot(Vas,k_cs/k_E_ss, 'k-', color='black')
+  plt.plot(Vas,k_ss/k_E_ss, 'k--', color='black')
+  plt.plot(Vas,k_if/k_E_ss, 'k.-', color='black')
   F = plt.gcf()
   F.savefig("fig1d_sphere.png")
 
