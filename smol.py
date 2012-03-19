@@ -27,9 +27,29 @@ results = empty()
 def ElectrostaticPMF(problem,psi):
 
     problem.pmf = Function(problem.V)
-    problem.pmf.vector()[:] = parms.valence * psi.vector()[:]
+    pmf = np.zeros( psi.vector().size() ) 
+    pmf[:] = parms.valence * psi.vector()[:]
+    
     # Not needed, givn how I formulated the PDE 
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
+    print "Min/Max of PMF are (%e,%e)" % (
+	np.min(pmf),
+    	np.max(pmf))
+
+    # get too small
+    THRESH=20
+    idx = (np.where(pmf < -THRESH))[0]
+    if(np.size(idx)>0): 
+      print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
+
+    # to large 
+    idx = (np.where(pmf > THRESH))[0]
+    if(np.size(idx)>0): 
+      print "Encountered %d values with very high PMF values/consider thresholding" % np.size(idx)
+    
+    problem.pmf.vector()[:] = pmf
+
+   
 
 # This works
 def Test():
@@ -124,6 +144,7 @@ def ProblemDefinition(problem,boundaries=0):
     psi = Function(V)
     psi.vector()[:] = 0.0
 
+
   ## assign init cond??????
 
   ## assign BC 
@@ -173,15 +194,12 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # Test function
     v = TestFunction(V)
 
-    #problem.pmf.vector()[:] = 0.1 * problem.pmf.vector()[:] 
     import numpy as np 
-    #print "min %f " % min(problem.pmf.vector()[:])
-    #print "max %f " % max(problem.pmf.vector()[:])
-    #problem.pmf.vector()[:] = 0.0 
-
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
     intfact = exp(- parms.beta * problem.pmf)
+    print "emin %f" % np.min(np.exp(-parms.beta * problem.pmf.vector()[:]))
+    print "emax %f" % np.max(np.exp(-parms.beta * problem.pmf.vector()[:]))
     invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
     # also refer ti Zhou eqn 2,3 uin 2011
@@ -215,6 +233,10 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # File("solution.pvd") << up
     #plot(up, interactive=True)
     File(pvdFileName) << results.up
+
+    from view import plotslice
+    plotslice(problem,results,title="no title",fileName="slice.png")
+
 
  
     #problem.pmf= pmf # shouldn't go here 

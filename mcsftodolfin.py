@@ -182,6 +182,20 @@ def generate_dolfin_mesh(coordinates, cells):
     mesh_cells.flags.writeable = True
     mesh_cells[:] = cells
 
+    # report on mesh 
+    # not importing the right things so doesnt work here (worked in smol though)  
+    #from dolfin import *         
+    #cell = mesh.ufl_cell()
+    #c  = Constant(1, cell)
+    #print "Total volume %e [A^3]" % assemble(c*dx, mesh=mesh)
+    ## each cell
+    #cv = []
+    #for c in cells(mesh):
+    #  v.append( c.volume() )
+    #print "Cell vol: Min %e Max %e [A^3]" % (min(v),max(v))
+
+
+
     # Return mesh
     return mesh
 
@@ -214,12 +228,22 @@ def write_dolfin_files(filename, mesh):
     cells.set_all(1) # not sure if this is right 
     File(filename+"_cells.xml.gz") << cells       
 
+# gives basic gemetric information for the marked boundaries 
+def meshgeoms(mesh,idx=":"):
+    coor = mesh.coordinates()
+    mol= empty()
+    mol.coor = coor[idx]
+    mol.min = np.min(mol.coor,axis=0)
+    mol.max = np.max(mol.coor,axis=0)
+    mol.dim = mol.max - mol.min 
+    mol.mid = 0.5 * ( mol.max + mol.min ) 
+
+    return mol 
+
 # checks that mesh is centered and of appropriate dimensions (to ensure 
 # we are using appropriate scale and FE mesh matches with APBS FD mesh  
 def do_checks(mesh,subdomains):
     from dolfin import DirichletBC, Constant, FunctionSpace, Function, File
-
-
 
     ## get all boundaries corresponding to molecular 
     V = FunctionSpace(mesh, "CG", 1)
@@ -245,17 +269,22 @@ def do_checks(mesh,subdomains):
     ## get limits of molecule  
     
     # mesh coords
-    coor = mesh.coordinates()
+    outeridx = np.where(markedall.vector()[:]  < 10000) # always true..
+    outer = meshgeoms(mesh,outeridx)
 
     # find all indices where molecule exists
     molidx = np.where(markedall.vector()[:] > 0)
 
     # extremes
-    mol = empty()
-    mol.coor = coor[molidx]
-    mol.min = np.min(mol.coor,axis=0)
-    mol.max = np.max(mol.coor,axis=0)
-    mol.dim = mol.max - mol.min 
+    #mol = empty()
+    #mol.coor = coor[molidx]
+    #mol.min = np.min(mol.coor,axis=0)
+    #mol.max = np.max(mol.coor,axis=0)
+    #mol.dim = mol.max - mol.min 
+    mol = meshgeoms(mesh,idx=molidx)
+
+    actidx = np.where(marked0.vector()[:] > 0)
+    act = meshgeoms(mesh,actidx) 
 
     # check if range contains (0,0,0) which indicates we pass through origin
     # I check for this by noting that the min must be < 0, and max > 0, therefore
@@ -264,10 +293,18 @@ def do_checks(mesh,subdomains):
     if(passing < 3):
       print "WARNING: It appears that the grid does not pass through origin. Please verify and recenter if need be"
 
+    # check sie of grid
+    print "Grid size [A]"
+    print outer.dim
+
     # check size of molecule 
     print "Molecule size [A] is "
     print mol.dim
     print "Compare this with original molecule. If incorrect, rescale mesh using XXX and repeat conversion"
+
+    # active site 
+    print "Active site center"
+    print act.mid
 
     
 

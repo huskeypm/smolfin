@@ -7,6 +7,7 @@ from params import *
 import numpy as np
 import gating_smol as gating 
 from LinearInteriorProblem import *
+from view import *
 
 class empty:pass
 
@@ -15,33 +16,6 @@ parms = params()
 
 V0 = 5
 
-def plotslice(problem,result,title="no title",fileName="slice.png"):
-    meshcoor = problem.mesh.coordinates()
-    
-    # assuming molecule is within 50 of middle of grid 
-    # want 500 points in each dir (resolution)
-    range = 50
-    numpt = 500
-    incr = numpt/ (2 * range) 
-    #(grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(incr*1j),-range:range:(incr*1j)]
-    (grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(numpt*1j),-range:range:(numpt*1j)]
-    from scipy.interpolate import griddata
-    slice = griddata(meshcoor, result.up.vector(), (grid_x, grid_y,grid_z),method="linear")
-    slice[np.isnan(slice)]=0
-    x1 = np.linspace(-range,range,numpt)
-    x2 = np.linspace(-range,range,numpt)
-    X1,X2 = np.meshgrid(x1,x2)
-
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(14,10))
-    gFontSize = 15
-    plt.title(title)
-    plt.ylabel("y [\AA]",fontsize=gFontSize)
-    plt.xlabel('z [\AA]',fontsize=gFontSize)
-    plt.pcolormesh( X1.T,X2.T,slice.T, shading='flat' )
-    F = plt.gcf()
-    F.savefig(fileName)
-    print "Plotted %s" % fileName
 
 
 
@@ -168,6 +142,8 @@ def ValidationSphere(useStored=0):
 
   # results 
   # from (18) of Song 
+  parms.D = 780 # 7.8 e4 A^2/us --> [um/s]
+  R = 8e-4 # 8 A --> 8e-4 um
   kon_elec  = 4 * np.pi * parms.D * q * parms.bulk_conc * parms.um3_to_M
   # assuming r2-->inf
   kon_elec  = np.exp(q/R) / (np.exp(q/R) - np.exp(0)) 

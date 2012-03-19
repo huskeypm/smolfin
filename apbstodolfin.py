@@ -1,5 +1,7 @@
 import numpy as np
 
+class empty:pass
+
 def read_fe_apbs_file(filename):
     print "Reading APBS file %s" % filename
     # Grab the lines from the file
@@ -172,12 +174,17 @@ def read_fd_apbs_file(apbsfilename):
                 #print "%e " % (vgrid.value((x, y, z)))
                 values.append(vgrid.value((x, y, z)))
 
-    print "Read %d coords " % len(coordinates)
-    #print values
-    print "Potential values [kT/e] min (%e) max (%e) " % (min(values), max(values))
-    #quit()
+    apbs = empty()
+    acoordinates = np.reshape( coordinates,[np.size(values), 3]) 
+    apbs.coordinates = acoordinates
+    apbs.values = values
+    apbs.res = [hx,hy,hz]
 
-    return(coordinates,values)
+    print "Read %d coords " % len(coordinates)
+    print "Potential values [kT/e] min (%e) max (%e) " % (min(values), max(values))
+    print "Resolution %f " % min(apbs.res)
+
+    return(apbs)
 
     
 
@@ -189,9 +196,9 @@ if __name__ == "__main__":
     gridType = "fd"
 
     if(gridType=="fe"):
-      coordinates, cells, values = read_fe_apbs_file(filename)
+      coordinates, values = read_fe_apbs_file(filename)
     if(gridType=="fd"):
-      coordinates, cells, values = read_fd_apbs_file(filename)
+      coordinates, values = read_fd_apbs_file(filename)
 
     mesh = generate_dolfin_mesh(coordinates, cells)
     values = generate_dolfin_function(mesh, values)
