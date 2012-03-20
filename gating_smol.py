@@ -83,10 +83,13 @@ def fast_ligandindep(problem):
 
 # inputs
 problem = empty()
+# Values -far- from protein (effectively ligand independent)
 problem.wa=1e9 # rate of forming absorbing state [1/s] 
 problem.wr=1e9 # rate of forming reflective state [1/s]
-problem.pa=0.5 # probability of being in absorbing state 
-problem.Vr = 0 # DEFINE [kcal/mol]
+problem.pa=0.5 # probability of being in absorbing state  
+problem.Vr = 0 # POtential associated with reflective state [kcal/mol]
+# Near protein (can compute from p_a(near) = p_a(far) exp(-(Va-Vr)/kT)
+problem.Va = -1 # potential associated when binding site
 
 def Run(problem,result=0):
 # compute outer problem 

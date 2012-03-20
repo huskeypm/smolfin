@@ -30,13 +30,14 @@ def Setup():
     problem.filePMF = "/home/huskeypm/sources//dolfin_smol/example/pmf/out.pmf";
 
     # gating 
-    problem.wa=1e9 # rate of forming absorbing state [1/s] 
-    problem.wr=1e9 # rate of forming reflective state [1/s]
-    problem.p_a=0.5 # probability of being in absorbing state 
-    problem.Va = -5 # DEFINE [kcal/mol]
+    print "WARNING: TODO Need to verify these quantities!"
+    problem.wa=0.67e9 # rate of forming absorbing state [1/s] 
+    problem.wr=3.23e9 # rate of forming reflective state [1/s]
+    problem.p_a=0.67e9 / 3.23e9; # probabilityy of being in absorbing state (?far from protein) 
+    problem.Va = -1.74 # Potential felt near open state ([kcal/mol]
     print "WARNING: for now assuming Va = %f" % problem.Va
     problem.Vr = 0 # DEFINE [kcal/mol]
-    print "WARNING: for now assuming Vr = %f" % problem.Vr
+    print "Assuming Vr = %f" % problem.Vr
 
 
     # borrow values from testboundaries
