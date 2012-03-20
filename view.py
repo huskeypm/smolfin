@@ -20,7 +20,10 @@ def PrintBoundary(mesh, boundary,file="marked"):
   print "Printing %s for viewing" % file
   File(file) << marked
 
-def JournalFigs():
+# create figures in style of jounrla formats 
+def JournalFig(scale=4): # this is the scaleup needed for DPI
+				 # requirements. set to 1 for viewing
+				 # interactively
     # size in publication 
     # single col - 3.085 inches 
     w = 3.085
@@ -34,11 +37,12 @@ def JournalFigs():
 
     # make fig 
     journalfig = empty()
-    journalfig.fig=plt.figure(figsize=(4*w,4*h),dpi=dpi)
+    journalfig.fig=plt.figure(figsize=(scale*w,scale*h),dpi=dpi)
     journalfig.fontSize=30
  
 
     ax = plt.gca()
+    journalfig.ax = ax 
     fontsize = 18
     for tick in ax.xaxis.get_major_ticks():
       tick.label1.set_fontsize(fontsize)
@@ -75,7 +79,7 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0)
     
 
     #fig = plt.figure(figsize=(14,10))
-    journalfig = JournalFigs() 
+    journalfig = JournalFig() 
     plt.title(title,fontsize=journalfig.fontSize)
     plt.ylabel("y [$\AA$]",fontsize=journalfig.fontSize)
     plt.xlabel('z [$\AA$]',fontsize=journalfig.fontSize)

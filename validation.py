@@ -9,12 +9,16 @@ import gating_smol as gating
 from LinearInteriorProblem import *
 from view import *
 
+
+import serca 
+
 class empty:pass
 
 problem = empty()
 parms = params()
 
 V0 = 5
+
 
 
 
@@ -29,9 +33,11 @@ def ValidateGatedChannel(kon_ext):
   problem.expnBVr  = np.exp(-parms.beta * Vr)
   
   # from Fig3 
+  # Zhou: kon_ext = 4 * problem.D * a 
   problem.k_E_ss = kon_ext
   pa_o_pc = 0.01
   problem.L = 5.* a
+  # Zhou: Va =-4.766
   
   
   problem.p_a = pa_o_pc / (1+pa_o_pc) # see notes, since pr = (1-pa)
@@ -55,16 +61,33 @@ def ValidateGatedChannel(kon_ext):
     k_ss[i] = k_ss_
     k_if[i] = k_if_ss
 
+    # for debugging 
+    print "Va (exp) %f (%f) " % (Vas[i],problem.expnBVa)
+    print "slow/induced %f " % k_cs_ss
+    print "fig:  %e " % (k_cs_ss / problem.k_E_ss)
+    print "slow/indep %f " % k_ss_
+    print "fig:  %e " % (k_ss_/problem.k_E_ss)
+    print "fast/induced: %f " % k_if_ss
+    print "fig:  %e " % (k_if_ss / problem.k_E_ss)
+    print "fast/indep: %f (same as induced)" % k_if_ss
+    print "fig:  %e " % (k_if_ss / problem.k_E_ss)
+
+
+
   # plot 
-  import matplotlib.pyplot as plt
-  fig = plt.figure(figsize=(14,10))
-  gFontSize = 15
-  plt.title("Gating ")
-  plt.ylabel("$k_G$ [1/Ms]",fontsize=gFontSize)
-  plt.xlabel('$V_a$ [kcal/mol]',fontsize=gFontSize)
-  plt.plot(Vas,k_cs/k_E_ss, 'k-', color='black')
-  plt.plot(Vas,k_ss/k_E_ss, 'k--', color='black')
-  plt.plot(Vas,k_if/k_E_ss, 'k.-', color='black')
+  journalfig = JournalFig()
+  plt.title("Gating ",fontsize=journalfig.fontSize)
+  plt.ylabel("$k_G/k_E$ $[\\frac{1}{Ms}]$",fontsize=journalfig.fontSize)
+  plt.xlabel('$V_a$ $[kcal/mol]$',fontsize=journalfig.fontSize)
+  p1, = plt.plot(Vas,k_cs/problem.k_E_ss, 'k-', color='black')
+  p2, = plt.plot(Vas,k_ss/problem.k_E_ss, 'k--', color='black')
+  p3, = plt.plot(Vas,k_if/problem.k_E_ss, 'k.-', color='black')
+  ax = journalfig.ax
+  ax.set_yscale('log')
+  #handles, labels = ax.get_legend_handles_labels()
+  ax.legend([p1,p2,p3],["Slow,induced","Slow,indifferent","Fast"])
+  
+  
   F = plt.gcf()
   F.savefig("fig1d_sphere.png")
 
@@ -88,19 +111,25 @@ def  ValidateLinearPotential(kon_ext):
   #invkss = 1/chargedresult.kon + invPMFs 
   invkss = 1/kon_ext + invkPMFs 
   k_ss = 1/invkss
+  k_E_ss = kon_ext
 
   # plot 
-  import matplotlib.pyplot as plt
-  fig = plt.figure(figsize=(14,10))
-  gFontSize = 25
-  plt.title("Linear Potential")
-  plt.ylabel("$k_{ss}$ [1/Ms]",fontsize=gFontSize)
-  plt.xlabel('$V_0$ [kcal/mol]',fontsize=gFontSize)
-  plt.plot(V0s,k_ss, 'k-', color='black')
+  journalfig = JournalFig()
+  plt.title("Linear Potential",fontsize=journalfig.fontSize)
+  plt.ylabel("$k_{ss}/k_E$ [1/Ms]",fontsize=journalfig.fontSize)
+  plt.xlabel('$V_0$ [kcal/mol]',fontsize=journalfig.fontSize)
+  plt.plot(V0s,k_ss/k_E_ss, 'k-', color='black')
+  journalfig.ax.set_yscale('log')
   F = plt.gcf()
   F.savefig("fig1c_sphere.png")
 
   return k_ss
+
+def ValidationTnC(useStored=1):
+
+def ValidationSERCA(useStored=1):
+   import serca
+   serca.Setup()
  
 # all validation cases (Fig 1s)
 def ValidationSphere(useStored=0):
@@ -160,7 +189,8 @@ def ValidationSphere(useStored=0):
 
   ## results
   i =0 # where V0 = -5 
-  print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon,chargedresult.kon,k_lp[i],k_gs[i]) 
+  scale = 1e9 # normalization in figures 
+  print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/scale,chargedresult.kon/scale,k_lp[i]/scale,k_gs[i]/scale) 
 
 
 if __name__ == "__main__":
@@ -172,9 +202,13 @@ if __name__ == "__main__":
   if len(sys.argv) < 2:  
       raise RuntimeError(msg)
 
-  if(sys.argv[1]=="run"):
-    ValidationSphere(useStored=0)
+  if(sys.argv[1]=="dbg"):
+    ValidateGatedChannel(4.)
+    ValidateLinearPotential(4.)
     #ValidationTnC(useStored=1)
+  elif(sys.argv[1]=="run"):
+    ValidationSphere(useStored=0)
+    ValidationTnC(useStored=1)
 
   else:
     raise RuntimeError(msg)
