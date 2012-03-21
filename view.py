@@ -91,3 +91,4 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0)
     F = plt.gcf()
     F.savefig(fileName)
     print "Plotted %s" % fileName
+

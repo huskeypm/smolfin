@@ -212,7 +212,7 @@ def write_dolfin_files(filename, mesh):
     from dolfin import File,MeshFunction
 
     print "Filename:", filename
-    print "mesh:", mesh.num_vertices(), mesh.num_cells()
+    #print "mesh:", mesh.num_vertices(), mesh.num_cells()
     File(filename+"_mesh.xml.gz") << mesh
     #File(filename+"_cellmarkers.xml.gz") << u
     #File(filename+"_vertmarkers.xml.gz") << uv
@@ -303,8 +303,9 @@ def do_checks(mesh,subdomains):
     print "Compare this with original molecule. If incorrect, rescale mesh using XXX and repeat conversion"
 
     # active site 
-    print "Active site center"
+    print "Active site center and dims"
     print act.mid
+    print act.dim
 
     
 

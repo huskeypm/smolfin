@@ -11,6 +11,7 @@ from view import *
 
 
 import serca 
+import troponin
 
 class empty:pass
 
@@ -62,15 +63,15 @@ def ValidateGatedChannel(kon_ext):
     k_if[i] = k_if_ss
 
     # for debugging 
-    print "Va (exp) %f (%f) " % (Vas[i],problem.expnBVa)
-    print "slow/induced %f " % k_cs_ss
-    print "fig:  %e " % (k_cs_ss / problem.k_E_ss)
-    print "slow/indep %f " % k_ss_
-    print "fig:  %e " % (k_ss_/problem.k_E_ss)
-    print "fast/induced: %f " % k_if_ss
-    print "fig:  %e " % (k_if_ss / problem.k_E_ss)
-    print "fast/indep: %f (same as induced)" % k_if_ss
-    print "fig:  %e " % (k_if_ss / problem.k_E_ss)
+    #print "Va (exp) %f (%f) " % (Vas[i],problem.expnBVa)
+    #print "slow/induced %f " % k_cs_ss
+    #print "fig:  %e " % (k_cs_ss / problem.k_E_ss)
+    #print "slow/indep %f " % k_ss_
+    #print "fig:  %e " % (k_ss_/problem.k_E_ss)
+    #print "fast/induced: %f " % k_if_ss
+    #print "fig:  %e " % (k_if_ss / problem.k_E_ss)
+    #print "fast/indep: %f (same as induced)" % k_if_ss
+    #print "fig:  %e " % (k_if_ss / problem.k_E_ss)
 
 
 
@@ -125,11 +126,6 @@ def  ValidateLinearPotential(kon_ext):
 
   return k_ss
 
-def ValidationTnC(useStored=1):
-
-def ValidationSERCA(useStored=1):
-   import serca
-   serca.Setup()
  
 # all validation cases (Fig 1s)
 def ValidationSphere(useStored=0):
@@ -164,6 +160,7 @@ def ValidationSphere(useStored=0):
   if(useStored==0):
     chargedresult = smol.Run(problem,pvdFileName="sphere_charge.pvd")
     plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
+    print chargedresult.kon
   else:
     print "Using stored values DONT TRUST";
     chargedresult = empty()
@@ -189,8 +186,9 @@ def ValidationSphere(useStored=0):
 
   ## results
   i =0 # where V0 = -5 
-  scale = 1e9 # normalization in figures 
+  scale = 1.0e9 # normalization in figures 
   print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/scale,chargedresult.kon/scale,k_lp[i]/scale,k_gs[i]/scale) 
+  print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]/1) 
 
 
 if __name__ == "__main__":
@@ -208,7 +206,8 @@ if __name__ == "__main__":
     #ValidationTnC(useStored=1)
   elif(sys.argv[1]=="run"):
     ValidationSphere(useStored=0)
-    ValidationTnC(useStored=1)
+    #serca.Validation(useStored=0)
+    #troponin.Validation(useStored=0)
 
   else:
     raise RuntimeError(msg)

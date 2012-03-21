@@ -47,7 +47,7 @@ class DefaultInteriorProblem:
      self.pmfFileName = pmfFileName
      self.sigmaR = sigmaR
      self.diff_const = diff_const
-     (self.x,self.V_x) = LoadPMF(pmfFileName,x0=0,xL=25)
+     (self.x,self.V_x) = LoadPMF(pmfFileName,x0=x0,xL=xL)
 
    
    # area along reaction coordinate for cylinder

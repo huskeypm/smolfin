@@ -3,10 +3,11 @@
 #
 from dolfin import *
 import numpy as np
-import Sphere
+#import Sphere
 #import Molecule
 from view import *
 from params import * # must do this for class
+# from smol import * 
 
 class empty:pass
 
@@ -198,15 +199,19 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
     intfact = exp(- parms.beta * problem.pmf)
-    print "emin %f" % np.min(np.exp(-parms.beta * problem.pmf.vector()[:]))
-    print "emax %f" % np.max(np.exp(-parms.beta * problem.pmf.vector()[:]))
+    #print "emin %f" % np.min(np.exp(-parms.beta * problem.pmf.vector()[:]))
+    #print "emax %f" % np.max(np.exp(-parms.beta * problem.pmf.vector()[:]))
     invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
     # also refer ti Zhou eqn 2,3 uin 2011
     # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
     # form of the PDE
     #  (no time dependence,so only consider del u del v term)
+
     F = parms.D * intfact*inner(grad(u), grad(v))*dx
+
+    #print "Trying different form...."
+    #F = parms.D * intfact*inner(grad(invintfact * u), grad(v))*dx
 
     # apply Neumann cond 
     # since noflux --> boundary==0, don't need to include this?
@@ -223,11 +228,16 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # u_1 = params.bulk_conc * exp(-beta * pmf)
     # u_1.assign(u) # following pg 50 of Logg 
 
+    
+
     # Project the solution
     # Return projection of given expression *v* onto the finite element space *V*
     # Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
     up = project(intfact*u)
     results.up = up
+
+    # debug
+    print "Solution range: %f - %f " % (min(up.vector()),max(up.vector()))
 
     ## print solution
     # File("solution.pvd") << up

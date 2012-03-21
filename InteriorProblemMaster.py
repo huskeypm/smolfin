@@ -21,7 +21,7 @@ class empty:pass
 #
 def Run(problem,InteriorObject=0):
   if(InteriorObject==0):
-      interProb = DefaultInteriorProblem(problem.filePMF)
+      interProb = DefaultInteriorProblem(problem.filePMF,sigmaR=problem.sigma,diff_const=problem.D,x0=problem.x0,xL=problem.xL)
   else:
       interProb = InteriorObject
   

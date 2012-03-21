@@ -26,13 +26,18 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0):
   ## exterior domain 
   if(results==0):
     exteriorResult = smol.Run(problem,boundaries=boundaries,pvdFileName=pvdFileName)
+
+    if(exteriorResult.kon < 1):
+      print "WARNING: Kon caclc failed"
+      exteriorResult.kon =1 
+
   else:
     print "Stored result used instead of copmpuyting smol"
     exteriorResult = results
 
   # defined in 4.1 Berez 
   invkE = 1/exteriorResult.kon
-  print "kE  %f" % exteriorResult.kon
+  #print "kE  %f" % exteriorResult.kon
 
 
   ## kon 

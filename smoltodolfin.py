@@ -6,36 +6,32 @@ import numpy
 from apbstodolfin import *
 from mcsftodolfin import *
 
+interpMethod="linear"
+#interpMethod="nearest"
+
 def write_smol_files(filename, mesh,u): # , u,vertexmarkers,facetmarkers):
     from dolfin import File
 
+    # for dolfin
     File(filename+"_mesh.xml.gz") << mesh
     File(filename+"_values.xml.gz") << u
-    File(filename+"_values.pvd") << u
-    #File(filename+"_dirichmarkers.xml.gz") << vertexmarkers
-    #File(filename+"_neumannmarkers.xml.gz") << facetmarkers
 
-# mark vertices with cell markers
-#def assign_vertex_markers(coordinates,cells,markers):
-#    markedvertices = np.zeros( np.size(coordinates[:,0]))
-#    # i believe the first three markers define the facet, while the
-#    # fourth is the normal, therefore we extract the vertex ids for these ((NOT ALWAYS)!!)
-#    for i in length(cells):
-#        if(marker[i]!=0):
-#            markedvertices[ cells[i,0:2] ] = marker[i]
-#            
-#            
-#    return markedvertices
-#
+    # for viewing in paraview 
+    File(filename+"_values.pvd") << u
 
 
 # interpolate Finite difference APBS mesh onto finite element mesh
-# replace nan with 0.0
+# replaces nan with 0.0
+#
+# useSubset - only interpolates FE points that are within the APBS grid dimensions (e.g. will not assign 0 elsewhere) 
 # mvalues - add in potential to preexisting mesh. Allows multiple FD grids to be applied
-# debug val - replaces potential with scalar to test interpolation 
-def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0):
+# mgridloc - describes where center of molecule is in the FE grid. Useful when the molecule is not centered
+# debugValues - replaces potential with scalar to test interpolation 
+# 
+def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
     from scipy.interpolate import griddata
 
+    ## cleaning up input data 
     # I suspect that very large/small data points are affecting the interpolation   
     # I am trying to rescale the potential here to clip any points beyond a certain range 
     pot = np.array(apbs.values)
@@ -58,19 +54,25 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0):
 
     apbs.values[:] = pot[:]
 
-    # now interp
+    ## shifting apbs values to align with grid 
+    apbs.meshcoordinates = apbs.coordinates + mgridloc
+    
+
+    ## interpolations 
     mcoordinates = mesh.coordinates()
     numCoor = len( mcoordinates[:,0])
 
     # replace subset
     if(usesubset==1):
       # find min/max of apbs 
-      apbs.min = np.min(apbs.coordinates,axis=0)
-      apbs.max = np.max(apbs.coordinates,axis=0)
-      print "APBS min"
-      print apbs.min
-      print "APBS max"
-      print apbs.max
+      apbs.meshmin = np.min(apbs.meshcoordinates,axis=0)
+      apbs.meshmax = np.max(apbs.meshcoordinates,axis=0)
+      print "APBS(mesh) min: "
+      print apbs.meshmin
+      print np.min(apbs.coordinates,axis=0)
+      print "APBS(mesh) max"
+      print apbs.meshmax
+      print np.max(apbs.coordinates,axis=0)
        
       #apbs.min = np.array([-9,-9,-9])  
       #apbs.max = -1 * apbs.min
@@ -78,23 +80,25 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0):
       inside=[]
       for i in range(0,numCoor):
         p = mcoordinates[i,:]
-        if((p[0] > apbs.min[0] and p[0] < apbs.max[0]) and (p[1] > apbs.min[1] and p[1] < apbs.max[1]) and ( p[2] > apbs.min[2] and p[2] < apbs.max[2])):
+        if((p[0] > apbs.meshmin[0] and p[0] < apbs.meshmax[0]) and (p[1] > apbs.meshmin[1] and p[1] < apbs.meshmax[1]) and ( p[2] > apbs.meshmin[2] and p[2] < apbs.meshmax[2])):
           #print p
           inside.append(i)
 
       print "Found %d points inside " % len(inside)
       mcoordsSub = mcoordinates[inside]
-      mvaluesSub = griddata(apbs.coordinates, apbs.values,(mcoordsSub),method='linear')
+      mvaluesSub = griddata(apbs.meshcoordinates, apbs.values,(mcoordsSub),method=interpMethod)
       mvalues[ inside ] = mvaluesSub
 
       if(debugValues!=0):
         mvalues[ inside ] = debugValues
    
     else:
-      mvalues = griddata(apbs.coordinates, apbs.values,(mcoordinates),method='linear')
+      mvalues = griddata(apbs.meshcoordinates, apbs.values,(mcoordinates),method=interpMethod)
 
     print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
-    #print mvalues
+
+
+    ## cleaning up bad pixes 
     bad = np.where(np.isnan(mvalues))        
     bad = bad[0]
 
@@ -107,7 +111,7 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0):
 
     return mvalues
 
-def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0):
+def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
@@ -139,7 +143,7 @@ def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0):
   
       # interpolate apbs values onto mcoordinates grid
       #if(skipAPBS!=1):
-      nvalues = interpAPBS(mesh,apbs,usesubset=1,mvalues=mvalues)#,debugValues=res)    
+      nvalues = interpAPBS(mesh,apbs,usesubset=1,mvalues=mvalues,mgridloc=mgridloc)#,debugValues=res)    
       mvalues = nvalues
       #print "%d->%d" % (len(zidx),len(zidxn))
     
@@ -174,22 +178,37 @@ def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0):
 if __name__ == "__main__":
 
     # ~/localTemp/NBCR/smol/apbs_fe/potential-0.dx
-    apbsfilename = ["example/molecule/potential-0.dx"]
+    #apbsfilename = ["example/molecule/potential-0.dx"]
+    apbsfilenames=[]       
     # ~/localTemp/NBCR/smol/gamer/p.pqr.output.out.m
-    mcsffilename = "example/molecule/p.pqr.output.out.m"
+    #mcsffilename = "example/molecule/p.pqr.output.out.m"
+    mcsffilename = "none"
+    mgridloc=[0,0,0] # location of molecular center within finite element mesh 
 
     import sys
     if len(sys.argv) <  3:
-        raise RuntimeError("expected an 1) mcsf and 2) apbs file(s) [in order of increasing resolution]")
+        raise RuntimeError("expected an 1) -mesh mcsf and 2) -p apbs file(s) [in order of increasing resolution] <3) -mgridloc '0 0 0' >")
 
-    mcsffilename = sys.argv[1]
+    for i in np.arange(len(sys.argv)):
+      if(sys.argv[i] == '-mesh'):
+        mcsffilename = sys.argv[i+1]
+        
+      if(sys.argv[i] == '-p'):
+        apbsfilenames.append(sys.argv[i+1])
 
-    # list all possible apbs args
-    #apbsfilename = sys.argv[2]
-    apbsfilenames = [sys.argv[i] for i in range(2, len(sys.argv))]
+      if(sys.argv[i] == '-mgridloc'):
+        spl = sys.argv[i+1].split(' ')
+        mgridloc=[ float(spl[0]), float(spl[1]), float(spl[2]) ]
 
-    print "WARNING: .M files are repositioned. not sure if APBS is in perfect alignment"
 
-    do_read_write(mcsffilename,apbsfilenames)
+    ## report 
+    print "mcsfilename:"
+    print mcsffilename
+    print "potentials:"
+    print apbsfilenames
+    print "grid loc (optional)"
+    print mgridloc
+
+    do_read_write(mcsffilename,apbsfilenames,mgridloc=mgridloc)
     #do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
 

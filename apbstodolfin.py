@@ -65,8 +65,15 @@ def read_fe_apbs_file(filename):
     if len(set(cells.flatten())) != len(values):
         raise RuntimeError("Expected all vertices to belong to a cell.")
 
+    apbs = empty()
+    #acoordinates = np.reshape( coordinates,[np.size(values), 3]) 
+    apbs.coordinates = acoordinates
+    apbs.cells  = cells  
+    apbs.values = values
+    apbs.res = 0.0
+
     # Return data
-    return coordinates, cells, values
+    return apbs
 
 def generate_dolfin_mesh(coordinates, cells):
     from dolfin import Mesh, MeshEditor
@@ -103,14 +110,14 @@ def write_dolfin_files(filename, mesh, u):
     File(filename+"_mesh.xml.gz") << mesh
     File(filename+"_values.xml.gz") << u
 
-def interpolate_to_grid(coordinates, values):
-    import numpy 
-    from scipy.interpolate import griddata
-
-    z = numpy.zeros((2,3))
-    z[0,:]=(4,21,23)
-
-    line = griddata(coordinates, values, (z),method='linear')
+#def interpolate_to_grid(coordinates, values):
+#    import numpy 
+#    from scipy.interpolate import griddata
+#
+#    z = numpy.zeros((2,3))
+#    z[0,:]=(4,21,23)
+##
+#    line = griddata(coordinates, values, (z),method='linear')
 
 
 # PKH validation - verified files are being read correctly from APBS 
@@ -196,13 +203,13 @@ if __name__ == "__main__":
     gridType = "fd"
 
     if(gridType=="fe"):
-      coordinates, values = read_fe_apbs_file(filename)
+      apbs= read_fe_apbs_file(filename)
     if(gridType=="fd"):
-      coordinates, values = read_fd_apbs_file(filename)
+      apbs= read_fd_apbs_file(filename)
 
-    mesh = generate_dolfin_mesh(coordinates, cells)
-    values = generate_dolfin_function(mesh, values)
-    write_dolfin_files(filename.replace(".dx", ""), mesh, values)
+    apbs.mesh = generate_dolfin_mesh(apbs.coordinates, apbs.cells)
+    apbs.values = generate_dolfin_function(apbs.mesh, apbs.values)
+    write_dolfin_files(filename.replace(".dx", ""), apbs.mesh, apbs.values)
 
     # attempting interpolation here 
     # filename = "example/molecule/potential-0.dx"
