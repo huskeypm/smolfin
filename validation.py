@@ -206,8 +206,8 @@ if __name__ == "__main__":
     #ValidationTnC(useStored=1)
   elif(sys.argv[1]=="run"):
     ValidationSphere(useStored=0)
-    #serca.Validation(useStored=0)
-    #troponin.Validation(useStored=0)
+    serca.Validation(useStored=0)
+    troponin.Validation(useStored=0)
 
   else:
     raise RuntimeError(msg)

@@ -66,31 +66,36 @@ def TroponinTest():
   return (problem)
 
 def TroponinActual():
-  root = "/home/huskeypm/scratch/troponin/marked"
+  root = "/home/huskeypm/scratch/validation/troponin/troponin"
   problem.fileMesh = root+"_mesh.xml.gz"
 
   mesh = Mesh(problem.fileMesh);
 
-  ## boundaries 
-  import TroponinBoundary as bound
+  ## troponinboundariesaries 
+  import TroponinBoundary as troponinboundaries
 
   # modify active site 
   # from marked.m 13893    1     -5.1399998665e+00    -6.1920005798e+01     1.3070001221e+02
-  bound.activeSiteLoc = np.array([-5.1399998665e+00,   -6.1920005798e+01,    1.3070001221e+02])
-  bound.activeSiteR   = 10.0
+  #troponinboundaries.activeSiteLoc = np.array([-5.1399998665e+00,   -6.1920005798e+01,    1.3070001221e+02])
+  #troponinboundaries.activeSiteR   = 10.0
   
  
   # mody outer
   #    3252    5     -4.0252001953e+02    -2.6274002075e+02    -1.5098001099e+02
   #outerPoint = np.array([-4.0252001953e+02,   -2.6274002075e+02,   -1.5098001099e+02])
-  #bound.outerR = np.linalg.norm(bound.dominantCentr[ [0,1] ])
-  #print bound.dominantCentr[ [0,1] ]
-  #print "outerR: %f" % bound.outerR
-  bound.outerR = 690 # based on paraview
+  #troponinboundaries.outerR = np.linalg.norm(troponinboundaries.dominantCentr[ [0,1] ])
+  #print troponinboundaries.dominantCentr[ [0,1] ]
+  #print "outerR: %f" % troponinboundaries.outerR
+  #troponinboundaries.outerR = 690 # based on paraview
+
+  troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])
+  troponinboundaries.activeSiteR   = 10.0
+  troponinboundaries.outerR = 690 # based on paraview
+
 
 
   problem.mesh = mesh
-  problem.bound=bound
+  problem.bound=troponinboundaries
 
   return (problem)
 
@@ -114,18 +119,21 @@ def TestBoundaries(mode):
   problem.V    = V
 
   # active site 
+  print "Active site"
   activeSite = bound.ActiveSite()
   bc0 = DirichletBC(V,Constant(1),activeSite)
   marked1 = Function(V)
   bc0.apply(marked1.vector())
   
   # bulk        
+  print "Bulk"        
   bulkBoundary = bound.BulkBoundary()
   bc0 = DirichletBC(V,Constant(2),bulkBoundary)
   marked2 = Function(V)
   bc0.apply(marked2.vector())
   
   # molecular    
+  print "Molecule"
   molecularBoundary = bound.MolecularBoundary()
   bc0 = DirichletBC(V,Constant(4),molecularBoundary)
   marked4 = Function(V)

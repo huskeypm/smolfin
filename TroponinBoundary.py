@@ -55,6 +55,7 @@ class MolecularBoundary(SubDomain):
       print x
       print "as %d t %d tot %d " % (isNotNearActiveSite,isNotOnOuter,isMol)
       
+      
 
 
     return isMol

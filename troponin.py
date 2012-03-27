@@ -74,12 +74,14 @@ def TnCTroponin(problem,boundaries=0,useStored=0):
 def Validation(useStored=0):
 
     ## isolated
-    #(unchargedresultsisolated,chargedresultsisolated) = TnCIsolated(problem,useStored=useStored)
+    (unchargedresultsisolated,chargedresultsisolated) = TnCIsolated(problem,useStored=useStored)
 
     ## troponin
     # see 120210_troponin.tex
     troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])       
     troponinboundaries.activeSiteR   = 10.0
+    troponinboundaries.outerR = 690 # based on paraview
+
     boundaries.activeSite = troponinboundaries.ActiveSite()
     boundaries.bulkBoundary = troponinboundaries.BulkBoundary()
 

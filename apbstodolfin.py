@@ -186,10 +186,12 @@ def read_fd_apbs_file(apbsfilename):
     apbs.coordinates = acoordinates
     apbs.values = values
     apbs.res = [hx,hy,hz]
+    apbs.dim = [nx,ny,nx]
 
     print "Read %d coords " % len(coordinates)
     print "Potential values [kT/e] min (%e) max (%e) " % (min(values), max(values))
     print "Resolution %f " % min(apbs.res)
+    print "Dim %dx%dx%d " % (apbs.dim[0], apbs.dim[1],apbs.dim[2])
 
     return(apbs)
 

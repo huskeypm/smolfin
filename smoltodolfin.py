@@ -5,19 +5,35 @@
 import numpy
 from apbstodolfin import *
 from mcsftodolfin import *
+from smol import * 
 
+writePotentialOnly=0
 interpMethod="linear"
 #interpMethod="nearest"
 
-def write_smol_files(filename, mesh,u): # , u,vertexmarkers,facetmarkers):
+def write_smol_files(filename, mesh,u,writePotentialOnly=0): # , u,vertexmarkers,facetmarkers):
     from dolfin import File
 
     # for dolfin
-    File(filename+"_mesh.xml.gz") << mesh
-    File(filename+"_values.xml.gz") << u
+    if(writePotentialOnly==0):
+      File(filename+"_mesh.xml.gz") << mesh
 
+    File(filename+"_values.xml.gz") << u
     # for viewing in paraview 
     File(filename+"_values.pvd") << u
+
+def ClipValues(pot, THRESH=999):
+    idx = (np.where(pot < -THRESH))[0]
+    if(np.size(idx)>0):
+      print "Encountered %d values with very small potential valus. Clipping to %f" % (np.size(idx),-THRESH)
+      pot[ idx ] = -THRESH
+
+    # to large 
+    idx = (np.where(pot > THRESH))[0]
+    if(np.size(idx)>0):
+      print "Encountered %d values with very high potential values. Clipping to %f" % (np.size(idx),THRESH)
+      pot[ idx ] = THRESH
+  
 
 
 # interpolate Finite difference APBS mesh onto finite element mesh
@@ -39,18 +55,9 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
         np.min(pot),
         np.max(pot))
 
-    # get too small
-    THRESH=2 
-    idx = (np.where(pot < -THRESH))[0]
-    if(np.size(idx)>0):
-      print "Encountered %d values with very small potential valus. Clipping to %f" % (np.size(idx),THRESH)
-      pot[ idx ] = -THRESH
 
-    # to large 
-    idx = (np.where(pot > THRESH))[0]
-    if(np.size(idx)>0):
-      print "Encountered %d values with very high potential values. Clipping to %f" % (np.size(idx),THRESH)
-      pot[ idx ] = THRESH
+    # get too small
+    ClipValues(pot,THRESH=999)
 
     apbs.values[:] = pot[:]
 
@@ -111,11 +118,11 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
 
     return mvalues
 
-def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
+def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
-    mesh= read_and_mark(mcsffilename)
+    mesh = problem.mesh
     mcoordinates = mesh.coordinates()
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
 
@@ -165,6 +172,13 @@ def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
     #r.vector()[:] = mvalues
     #File("sominterp.pvd") << r  
 
+    # Constrain potential to give values no higher than 55M (next to protein in stern layer) 
+    # 55 = 1 exp(- q E /kT)
+    maxPotent = np.log(55) * (1/parms.beta) / parms.valence
+    ClipValues(mvalues,THRESH=maxPotent)
+ 
+     
+
 
     # create mesh, etc
     #mesh = generate_dolfin_mesh(mcoordinates, mcells)
@@ -172,7 +186,7 @@ def do_read_write(mcsffilename,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
 
 
     # save
-    write_smol_files(mcsffilename.replace(".m", ""), mesh, values) #,markedvertices,mmarkers)
+    write_smol_files(mcsffilename.replace(".m", ""), mesh, values,writePotentialOnly=writePotentialOnly) #,markedvertices,mmarkers)
 
 
 if __name__ == "__main__":
@@ -187,11 +201,22 @@ if __name__ == "__main__":
 
     import sys
     if len(sys.argv) <  3:
-        raise RuntimeError("expected an 1) -mesh mcsf and 2) -p apbs file(s) [in order of increasing resolution] <3) -mgridloc '0 0 0' >")
+        raise RuntimeError("expected an 1) -mcsf mcsf and 2) -p apbs file(s) [in order of increasing resolution] <3) -mgridloc '0 0 0' >")
 
     for i in np.arange(len(sys.argv)):
-      if(sys.argv[i] == '-mesh'):
+      if(sys.argv[i] == '-mcsf'):
         mcsffilename = sys.argv[i+1]
+        print "Here"
+        problem.mesh= read_and_mark(mcsffilename)
+
+      if(sys.argv[i] == '-mesh'):
+        meshfilename = sys.argv[i+1]
+        mcsffilename = meshfilename.replace("_mesh.xml.gz",".m")
+        print "Mostly for debugging at this point since not fully implemented"
+        from dolfin import Mesh
+        problem.mesh = Mesh(meshfilename)
+        writePotentialOnly=1
+
         
       if(sys.argv[i] == '-p'):
         apbsfilenames.append(sys.argv[i+1])
@@ -202,13 +227,14 @@ if __name__ == "__main__":
 
 
     ## report 
-    print "mcsfilename:"
-    print mcsffilename
+    #print "mcsfilename:"
+    #print mcsffilename
     print "potentials:"
     print apbsfilenames
     print "grid loc (optional)"
     print mgridloc
 
-    do_read_write(mcsffilename,apbsfilenames,mgridloc=mgridloc)
+
+    do_read_write(problem,apbsfilenames,mgridloc=mgridloc)
     #do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
 

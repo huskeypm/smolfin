@@ -198,17 +198,20 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     import numpy as np 
     # The diffusion part of PDE
     # Recasting as integration factor (see Eqn (5) in Notes)
-    intfact = exp(- parms.beta * problem.pmf)
-    #print "emin %f" % np.min(np.exp(-parms.beta * problem.pmf.vector()[:]))
-    #print "emax %f" % np.max(np.exp(-parms.beta * problem.pmf.vector()[:]))
-    invintfact = 1/intfact;
+    intfact    =    exp(-parms.beta * problem.pmf)
+    intfact_np = np.exp(-parms.beta * problem.pmf.vector()[:])
+    print "Potential range: %f - %f " %  (np.min(intfact_np), np.max(intfact_np))
+
+    #invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
     # also refer ti Zhou eqn 2,3 uin 2011
     # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
     # form of the PDE
     #  (no time dependence,so only consider del u del v term)
 
-    F = parms.D * intfact*inner(grad(u), grad(v))*dx
+    #F = parms.D * intfact*inner(grad(u), grad(v))*dx
+    # F=0 anyway, so can just solve grad portion
+    F = inner(grad(u),grad(v))*dx
 
     #print "Trying different form...."
     #F = parms.D * intfact*inner(grad(invintfact * u), grad(v))*dx
@@ -234,18 +237,25 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # Return projection of given expression *v* onto the finite element space *V*
     # Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
     up = project(intfact*u)
+    print "Unprojected Solution range: %f - %f " %  (min(u.vector()),max(u.vector()))
+    # gives non-negative values 
+    #print "Projecting on difference basis"
+    #up = project(intfact*u,FunctionSpace(problem.mesh,"DG",0))
+    # overriding project with simply numpy op (to avoid issues w basis)
+    #up.vector()[:] *= np.exp(-potential/kT) 
+    up.vector()[:] = u.vector()[:] * intfact_np[:]
     results.up = up
 
     # debug
-    print "Solution range: %f - %f " % (min(up.vector()),max(up.vector()))
+    print "Projected solution range: %f - %f " %  (min(up.vector()),max(up.vector()))
 
     ## print solution
     # File("solution.pvd") << up
     #plot(up, interactive=True)
     File(pvdFileName) << results.up
 
-    from view import plotslice
-    plotslice(problem,results,title="no title",fileName="slice.png")
+    #from view import plotslice
+    #plotslice(problem,results,title="no title",fileName="slice.png")
 
 
  

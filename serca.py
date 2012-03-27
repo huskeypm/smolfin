@@ -87,6 +87,7 @@ def Validation(useStored=0):
     #problem.filePotential="none"
     chargedresult = Run(problem,boundaries=boundaries,pvdFileName="serca_charged.pvd",useStored=useStored)
     #chargedresult = Run(problem,pvdFileName="serca_charged.pvd",useStored=useStored)
+    quit()
 
     ## with uncharged lipids
     problem.filePotential= "/home/huskeypm/scratch/validation/serca_no_lipid_chg/serca_values.xml.gz"

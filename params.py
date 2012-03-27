@@ -18,7 +18,7 @@ class params:
     self.bulk_conc = Constant(1.0)
     self.D = 390.0 # diffusion constant, [um^2/s]
     self.beta = 1/0.693 # 1/kT, [kcal/mol]
-    self.valence = 1.0   # why do I need a constant? TODO  Constant(2)
+    self.valence = 2.0   # why do I need a constant? TODO  Constant(2)
 
     # temporary
     self.temp_outerR = 5.0
