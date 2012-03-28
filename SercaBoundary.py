@@ -5,12 +5,19 @@ import numpy as np
 
 ## VARIABLES
 
+## DEFAULT 
 # active site is defined as region within this 'sphere'
 activeSiteLoc = np.array([0,1,0])
 activeSiteR   = 0.5
 
 # bulk conc is assumed at 'top' of box defined by z
 topZ = 1.0
+
+## USER 
+activeSiteLoc = np.array([20.730,-27.038 , 8.204 - 113])
+activeSiteR   = 10.0
+topZ = 0.0
+
 
 def IsNearActiveSite(x):
     r = np.linalg.norm(activeSiteLoc-x)

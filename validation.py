@@ -187,7 +187,7 @@ def ValidationSphere(useStored=0):
   ## results
   i =0 # where V0 = -5 
   scale = 1.0e9 # normalization in figures 
-  print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/scale,chargedresult.kon/scale,k_lp[i]/scale,k_gs[i]/scale) 
+  print "Sphere(%e) & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (scale,unchargedresult.kon/scale,chargedresult.kon/scale,k_lp[i]/scale,k_gs[i]/scale) 
   print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]/1) 
 
 

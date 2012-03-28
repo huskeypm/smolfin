@@ -33,18 +33,18 @@ def SercaActual():
 
   # modify active site 
   # from test.m       12458    2     -1.4566563606e+01     3.3411479950e+01     2.7281160355e+01
-  bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01,    2.7281160355e+01])
+  #bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01,    2.7281160355e+01])
   # HACK 
-  bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
-  bound.activeSiteR   = 10.0
+  #bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
+  #bound.activeSiteR   = 10.0
   
  
   # mody outer
   #         12000    2      2.0618418884e+02    -1.4678872681e+02     1.4827406311e+02
   # NOT CORRECT? bound.topZ = 1.4827406311e+02
-  bound.topZ = 10.0 
+  #bound.topZ = 10.0 
   #HACKS 
-  bound.topZ = 0.0 
+  #bound.topZ = 0.0 
 
 
   problem.mesh = mesh
@@ -88,9 +88,9 @@ def TroponinActual():
   #print "outerR: %f" % troponinboundaries.outerR
   #troponinboundaries.outerR = 690 # based on paraview
 
-  troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])
-  troponinboundaries.activeSiteR   = 10.0
-  troponinboundaries.outerR = 690 # based on paraview
+  # IN TROPONINBOUNDARY troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])
+  # IN TROPONINBOUNDARY troponinboundaries.activeSiteR   = 10.0
+  # IN TROPONINBOUNDARY troponinboundaries.outerR = 480 # based on paraview
 
 
 
@@ -118,26 +118,29 @@ def TestBoundaries(mode):
   V = FunctionSpace(mesh, "Lagrange", 1)
   problem.V    = V
 
+
   # active site 
-  print "Active site"
   activeSite = bound.ActiveSite()
   bc0 = DirichletBC(V,Constant(1),activeSite)
   marked1 = Function(V)
   bc0.apply(marked1.vector())
+  nEle =  np.size(marked1.vector().array())
+  print "Active site: (%d/%d)" % ( np.sum(marked1.vector().array()), nEle) 
+  
   
   # bulk        
-  print "Bulk"        
   bulkBoundary = bound.BulkBoundary()
   bc0 = DirichletBC(V,Constant(2),bulkBoundary)
   marked2 = Function(V)
   bc0.apply(marked2.vector())
+  print "Bulk: (%d/%d)" % ( np.sum(marked2.vector().array())/2, nEle) 
   
   # molecular    
-  print "Molecule"
   molecularBoundary = bound.MolecularBoundary()
   bc0 = DirichletBC(V,Constant(4),molecularBoundary)
   marked4 = Function(V)
   bc0.apply(marked4.vector())
+  print "Molecule: (%d/%d)" % ( np.sum(marked4.vector().array()/4), nEle) 
   
   marked = marked1
   marked.vector()[:]= marked1.vector()[:] + marked2.vector()[:] + marked4.vector()[:]

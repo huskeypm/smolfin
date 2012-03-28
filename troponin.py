@@ -39,14 +39,14 @@ def TnCIsolated(problem,useStored=0):
 
     # wo electro
     problem.filePotential="none"
-    uncharged = channel.Run(problem,pvdFileName="tnc_isolated_uncharged.pvd",results=results)
+    uncharged = channel.Run(problem,pvdFileName=root+"_uncharged.pvd",results=results)
 
     # w electro 
     problem.filePotential= root+"_values.xml.gz"
     #print "Skipping electro for now"
     #problem.filePotential="none"
 
-    charged = channel.Run(problem,pvdFileName="tnc_isolated_charged.pvd",results=results)
+    charged = channel.Run(problem,pvdFileName=root+"_charged.pvd",results=results)
  
     return(uncharged,charged)
 
@@ -64,9 +64,14 @@ def TnCTroponin(problem,boundaries=0,useStored=0):
     problem.fileMesh = root+"_mesh.xml.gz"
     problem.fileSubdomains= root+"_subdomains.xml.gz"
     problem.filePotential= root+"_values.xml.gz"
-    print "Skipping electro for now"
+    noElectro=0
+
+
+    #chg 
+    results= smol.Run(problem,boundaries=boundaries,pvdFileName=root+".pvd")
+    # unchg
     problem.filePotential="none"
-    results = smol.Run(problem,boundaries=boundaries,pvdFileName="troponin.pvd")
+    results_unchg = smol.Run(problem,boundaries=boundaries,pvdFileName=root+"_unchg.pvd")
 
     return (results)
 
@@ -78,12 +83,13 @@ def Validation(useStored=0):
 
     ## troponin
     # see 120210_troponin.tex
-    troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])       
-    troponinboundaries.activeSiteR   = 10.0
-    troponinboundaries.outerR = 690 # based on paraview
+    # in TroponinBoundary troponinboundaries.activeSiteLoc = np.array([-30.345, 39.371,216.75])       
+    # in TroponinBoundary troponinboundaries.activeSiteR   = 10.0
+    # in TroponinBoundary troponinboundaries.outerR = 450 # based on paraview, plus a little less 
 
     boundaries.activeSite = troponinboundaries.ActiveSite()
     boundaries.bulkBoundary = troponinboundaries.BulkBoundary()
+    #molecularBoundary = bound.MolecularBoundary() # i think we can ignore, since zero anyway
 
     resultstroponin = TnCTroponin(problem,boundaries=boundaries,useStored=useStored)
     #resultstroponin = TnCTroponin(problem,useStored=useStored)

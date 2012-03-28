@@ -166,7 +166,7 @@ def ProblemDefinition(problem,boundaries=0):
     print "Overriding marked boundaries with user definition (test with testboundaries.py)"
     #activeSite = bound.ActiveSite()
     #bulkBoundary = bound.BulkBoundary()
-    #molecularBoundary = bound.MolecularBoundary()
+    #molecularBoundary = bound.MolecularBoundary() # i think we can ignore, since zero anyway 
     bc0 = DirichletBC(V,Constant(parms.active_site_absorb),boundaries.activeSite)
     bc1 = DirichletBC(V,Constant(parms.bulk_conc),boundaries.bulkBoundary)
  
@@ -252,6 +252,7 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     ## print solution
     # File("solution.pvd") << up
     #plot(up, interactive=True)
+    print "Printing solution to %s" % pvdFileName
     File(pvdFileName) << results.up
 
     #from view import plotslice

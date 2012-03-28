@@ -20,7 +20,8 @@ def write_smol_files(filename, mesh,u,writePotentialOnly=0): # , u,vertexmarkers
 
     File(filename+"_values.xml.gz") << u
     # for viewing in paraview 
-    File(filename+"_values.pvd") << u
+    pot = u
+    File(filename+"_values.pvd") << pot
 
 def ClipValues(pot, THRESH=999):
     idx = (np.where(pot < -THRESH))[0]
@@ -118,14 +119,9 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
 
     return mvalues
 
-def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
-    #read gamer
-    #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
-    #mesh= read_and_mark(mcsffilename,nomark=1)
-    mesh = problem.mesh
-    mcoordinates = mesh.coordinates()
+# use for interpolating form FD apbs files 
+def InterpolateAPBSFiles(apbsfilenames,mgridloc=[0,0,0]):
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
-
     prevRes =9999;
     for apbsfilename in apbsfilenames:
       #print "Reading %s" % apbsfilename 
@@ -163,6 +159,58 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
       #else:
       #    mvalues = np.zeros( np.size(mcoordinates[:,1]))      
 
+      return mvalues 
+
+def readapbscsv(mesh,csvfilename):
+    #print "WARNING: this does not attempt to check that your vertices match between apbs and .m!!!!!"
+    print "WARNING: expects spaces"
+    lines = open(csvfilename).readlines()
+    all = []
+    for line in lines:    
+      all.append(map(float, line.split()))  
+
+    all= np.array(all, dtype="d")
+    #coordinates = all[:,
+    avalues = all[:,3]
+    acoords = all[:,0:3]
+
+    from scipy.interpolate import griddata
+    mvalues= griddata(acoords, avalues, (mesh.coordinates()),method="nearest")
+
+    bad = np.where(np.isnan(mvalues))
+    bad = bad[0]
+
+
+    if(np.size(bad) > 0):
+      print "Found %d bad entries, which suggest APBS grid does not overlap with FE grid." % np.size(bad)
+      # shouldn't have this issue do definitely die
+      quit()
+
+
+
+    print "min/max %f %f " % (np.min(mvalues), np.max(mvalues))
+    return mvalues
+
+# csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
+def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0], csvfilename="none"):
+    #read gamer
+    #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
+    #mesh= read_and_mark(mcsffilename,nomark=1)
+    mesh = problem.mesh
+    mcoordinates = mesh.coordinates()
+    mvalues = np.zeros( len(mcoordinates[:,0]) ) 
+
+
+    # hack
+    if(csvfilename!="none"): 
+      mvalues = readapbscsv(mesh,csvfilename)
+    
+
+
+    else:
+      mvalues = InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=mgridloc)
+
+
     # check that i can still create a mesh/ something weird was happening in 
     # interactive session
     #print "Teston ly"
@@ -178,6 +226,7 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0]):
     ClipValues(mvalues,THRESH=maxPotent)
  
      
+    print "Final: Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
 
 
     # create mesh, etc
@@ -197,11 +246,12 @@ if __name__ == "__main__":
     # ~/localTemp/NBCR/smol/gamer/p.pqr.output.out.m
     #mcsffilename = "example/molecule/p.pqr.output.out.m"
     mcsffilename = "none"
+    csvfilename = "none"
     mgridloc=[0,0,0] # location of molecular center within finite element mesh 
 
     import sys
     if len(sys.argv) <  3:
-        raise RuntimeError("expected an 1) -mcsf mcsf and 2) -p apbs file(s) [in order of increasing resolution] <3) -mgridloc '0 0 0' >")
+        raise RuntimeError("expected an 1) -mcsf/mesh mcsf/mesh file and 2) -p apbs file(s) [in order of increasing resolution] < -mgridloc '0 0 0' -csv csvapbs>")
 
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
@@ -221,6 +271,9 @@ if __name__ == "__main__":
       if(sys.argv[i] == '-p'):
         apbsfilenames.append(sys.argv[i+1])
 
+      if(sys.argv[i] == '-csv'):
+        csvfilename = sys.argv[i+1]
+
       if(sys.argv[i] == '-mgridloc'):
         spl = sys.argv[i+1].split(' ')
         mgridloc=[ float(spl[0]), float(spl[1]), float(spl[2]) ]
@@ -235,6 +288,6 @@ if __name__ == "__main__":
     print mgridloc
 
 
-    do_read_write(problem,apbsfilenames,mgridloc=mgridloc)
+    do_read_write(problem,apbsfilenames,mgridloc=mgridloc,csvfilename=csvfilename)
     #do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
 

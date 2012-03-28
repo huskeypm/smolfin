@@ -45,13 +45,14 @@ def Setup():
     # compare this with value used in APBS calcs
     #sercaboundaries.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
     # active site in pqr file - gridshift (see 120306_mesing.tx)
-    sercaboundaries.activeSiteLoc = np.array([20.730,-27.038 , 8.204 - 113])
-    sercaboundaries.activeSiteR   = 10.0
-    sercaboundaries.topZ = 0.0
+    # IN SERCABOUNDARY sercaboundaries.activeSiteLoc = np.array([20.730,-27.038 , 8.204 - 113])
+    # IN SERCABOUNDARY sercaboundaries.activeSiteR   = 10.0
+    # IN SERCABOUNDARY sercaboundaries.topZ = 0.0
 
      
     boundaries.activeSite = sercaboundaries.ActiveSite()
     boundaries.bulkBoundary = sercaboundaries.BulkBoundary()
+    #molecularBoundary = bound.MolecularBoundary() # i think we can ignore, since zero anyway
 
     return root
 
@@ -79,19 +80,19 @@ def Validation(useStored=0):
     #smol.Run(problem, boundaries=boundaries)
     problem.filePotential= "none"
     #unchargedresults = Run(problem,boundaries=boundaries,pvdFileName="serca_uncharged.pvd")
-    unchargedresult = Run(problem,pvdFileName="serca_uncharged.pvd",useStored=useStored)
+    unchargedresult = Run(problem,pvdFileName=root+"_uncharged.pvd",useStored=useStored)
 
     ## w electro 
     problem.filePotential= root+"_values.xml.gz"
     #print "Skipping electro for now"
     #problem.filePotential="none"
-    chargedresult = Run(problem,boundaries=boundaries,pvdFileName="serca_charged.pvd",useStored=useStored)
+    chargedresult = Run(problem,boundaries=boundaries,pvdFileName=root+"_charged.pvd",useStored=useStored)
     #chargedresult = Run(problem,pvdFileName="serca_charged.pvd",useStored=useStored)
-    quit()
 
     ## with uncharged lipids
-    problem.filePotential= "/home/huskeypm/scratch/validation/serca_no_lipid_chg/serca_values.xml.gz"
-    nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName="serca_nolipidcharged.pvd",useStored=useStored)
+    unchgRoot  = "/home/huskeypm/scratch/validation/serca_no_lipid_chg/serca_no_lipid_chg"
+    problem.filePotential= unchgRoot+"_values.xml.gz"
+    nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName=unchgRoot+".pvd",useStored=useStored)
 
     print "SERCA & %3.1e & %3.1e &  & %3.1e & %3.1e & %3.1e \\\\" % (
       unchargedresult.kon,
