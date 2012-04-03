@@ -11,7 +11,10 @@ import channel_smol as channel
 import TroponinBoundary as troponinboundaries
 
 #bound = TroponinBoundary()
-parms = params()
+#parms = params()
+import smol
+parms = smol.parms
+
 problem = smol.problem
 
 class empty:pass
@@ -32,10 +35,12 @@ def TnCIsolated(problem,useStored=0):
 
     # interior 
     problem.filePMF = root+".pmf"
-    problem.sigma = 4  * np.pi * 10**2  # 10 Ang^2
+    print "%s" %("NEED TO USE DIFF. SIGMA DEFINITION FOR TNC - DONT TRUST RESULTS UNTIL THEN") 
+    problem.channelR = 10  # 10 Ang^2
     problem.D = parms.D
-    problem.x0 = 9;
-    problem.xL = 25;
+    problem.x0 = 2;   # In binding site (Dist [AA] between E76 and Ca)
+    problem.x0 = 3.6;   # In binding site (Dist [AA] between E76 and Ca)
+    problem.xL = 4.3; # Just before rapid increase in PMF (5.5) 
 
     # wo electro
     problem.filePotential="none"

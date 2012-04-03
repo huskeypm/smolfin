@@ -8,7 +8,10 @@
 
 import numpy as np
 from params import * # must do this for class
-parms = params()
+#parms = params()
+import smol
+parms = smol.parms
+
 
 class empty:pass
 

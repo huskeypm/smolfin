@@ -3,10 +3,12 @@
 # This script sets up relevant terms for PMF term describining binding channel 
 #
 
+import smol 
 import numpy as np
 from params import *
 
-parms = params()
+#parms = params()
+parms = smol.parms
 
 class empty:pass
 

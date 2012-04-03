@@ -12,7 +12,14 @@ import gating_smol as gating
 import SercaBoundary as sercaboundaries
 
 #bound = TroponinBoundary()
-parms = params()
+#$parms = params()
+import smol
+parms = smol.parms
+
+
+
+
+
 problem = smol.problem
 
 class empty:pass
@@ -27,7 +34,8 @@ def Setup():
   
     # pmf 
     problem.filePMF = root+".pmf"
-    problem.sigma = 4  * np.pi * 10**2  # 10 Ang^2
+    problem.diameter = 10 # AA
+    problem.channelR = problem.diameter
     problem.D = parms.D
     problem.x0 = 2;
     problem.xL = 25;

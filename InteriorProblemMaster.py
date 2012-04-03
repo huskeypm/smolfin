@@ -7,7 +7,12 @@ import numpy as np
 from params import *
 from DefaultInteriorProblem import *
 
-parms = params()
+#parms = params()
+import smol
+parms = smol.parms
+
+
+
 
 class empty:pass
 
@@ -21,7 +26,8 @@ class empty:pass
 #
 def Run(problem,InteriorObject=0):
   if(InteriorObject==0):
-      interProb = DefaultInteriorProblem(problem.filePMF,sigmaR=problem.sigma,diff_const=problem.D,x0=problem.x0,xL=problem.xL)
+      interProb = DefaultInteriorProblem(problem.filePMF,channelR=problem.channelR,diff_const=problem.D,x0=problem.x0,xL=problem.xL)
+      print "Here"
   else:
       interProb = InteriorObject
   
@@ -32,9 +38,17 @@ def Run(problem,InteriorObject=0):
 
 
   # prepare integrand 
+  #print "V_x"
+  #print interProb.V_x
   boltz = np.exp(parms.beta * interProb.V_x) 
   interProb.boltz = boltz
+  #print "Boltz"
+  #print interProb.boltz
+  #print interProb.D_x   
+  #print interProb.Sigma_x
   integ = interProb.boltz / (interProb.D_x * interProb.Sigma_x)
+  #print "integrand"
+  #print integ
   
   # integrate 
   from numpy import trapz 
@@ -42,13 +56,25 @@ def Run(problem,InteriorObject=0):
   results = empty()
   # for consistency, defining kpmf as 1/IntegralTerm in 4.1
   integral = trapz(integ,interProb.x)
-  results.invkPMF= integral
-  #print "Interior integral %f " % integral
+  # 120401 - verified w maxima
+  #print "%f boltzz only " % trapz(np.exp(parms.beta * interProb.V_x),interProb.x)
+  #integral = trapz(np.ones(np.size(interProb.x)),interProb.x)
+  #print "x " 
+  #print interProb.x
+  #print "Interior integral %e " % integral
+
+  kpmf = 1/integral * parms.um3_to_M
+  #print "rescaling into units of Ms %e" % kpmf 
+  results.invkPMF= 1/kpmf     
+
+
   
   # provide Boltzman distribution at boundary x=L (channel mouth location)
   # note: be sure that this is a boltzman fact, as is the quantity in LoadPMF
   results.prob_x = np.exp(-parms.beta * interProb.V_x)
   xL = len(interProb.x)-1
+  results.temp = integral
+  results.kPMF = kpmf
   results.xL = interProb.x[ xL ]
   results.x0 = interProb.x[ 0 ]
   results.prob_xL= results.prob_x[ xL ]
@@ -57,6 +83,10 @@ def Run(problem,InteriorObject=0):
   results.V_xL= interProb.V_x[ xL ]
   results.D_x = interProb.D_x
   results.Sigma_x = interProb.Sigma_x
+
+
+  #print "quit for debug"
+  #quit()
  
   return (results)
   

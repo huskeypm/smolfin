@@ -5,7 +5,10 @@ from params import * # must do this for class
 class empty:pass
 
 
-parms = params()
+#parms = params()
+import smol
+parms = smol.parms
+
 problem = smol.problem
 
 

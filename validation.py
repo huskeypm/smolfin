@@ -16,7 +16,10 @@ import troponin
 class empty:pass
 
 problem = empty()
-parms = params()
+import smol
+parms = smol.parms
+
+#parms = params()
 
 V0 = 5
 
@@ -99,19 +102,24 @@ def ValidateGatedChannel(kon_ext):
 
 # validation of linear potential problem 
 def  ValidateLinearPotential(kon_ext):
-  sigma = 1 #
-  num=11
+  num=101
+  V0 = 10
   V0s = np.linspace(-V0,V0,num)
   invkPMFs = np.zeros(num)
+  kPMFs = np.zeros(num)
 
   for i in range(num):
     linearIntProb = LinearInteriorProblem(V0=V0s[i])
     result=InteriorProblemMaster.Run(problem,InteriorObject=linearIntProb)
     invkPMFs[i] = result.invkPMF
-  
+    kPMFs[i] = result.kPMF
+ 
+
   #invkss = 1/chargedresult.kon + invPMFs 
-  invkss = 1/kon_ext + invkPMFs 
-  k_ss = 1/invkss
+  
+  #invkss = 1/kon_ext + invkPMFs 
+  #k_ss = 1/invkss
+  k_ss = kon_ext * kPMFs / (kon_ext + kPMFs)
   k_E_ss = kon_ext
 
   # plot 
@@ -120,9 +128,11 @@ def  ValidateLinearPotential(kon_ext):
   plt.ylabel("$k_{ss}/k_E$ [1/Ms]",fontsize=journalfig.fontSize)
   plt.xlabel('$V_0$ [kcal/mol]',fontsize=journalfig.fontSize)
   plt.plot(V0s,k_ss/k_E_ss, 'k-', color='black')
-  journalfig.ax.set_yscale('log')
+  #journalfig.ax.set_yscale('log')
   F = plt.gcf()
   F.savefig("fig1c_sphere.png")
+
+  
 
   return k_ss
 
@@ -182,7 +192,6 @@ def ValidationSphere(useStored=0):
    # fig3 barrade
   print "WARNING: assuming constant potential here - needs to be generalized"
   k_gs = ValidateGatedChannel(chargedresult.kon)
-
 
   ## results
   i =0 # where V0 = -5 

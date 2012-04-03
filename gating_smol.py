@@ -16,9 +16,16 @@ parms = smol.parms
 
 # TODO - need to generalize for arbitray PMFs
 #        Mostly need to replace computeChanellTerm with call to InteriorProblem gu#        but with a modified PMF (Ve vs Va, for inst)
+# returns kPMF [1/Ms]
 def computeChannelTerm(problem,expnBV):
-  channelTerm = problem.L/(problem.D*problem.sigma*expnBV)
-  return channelTerm
+  #print problem.D
+  #print problem.L
+  #print problem.sigma
+  #print expnBV
+  invkPMF = problem.L/(problem.D*problem.sigma*expnBV)
+  kPMF = 1/invkPMF
+  kPMF = kPMF * parms.um3_to_M
+  return kPMF
 
 # estimate Veff using 3.17
 def computeVeff(problem):
@@ -27,9 +34,9 @@ def computeVeff(problem):
 # expnBV = exp(-BV) term 
 def slow(problem, expnBV):
   
-  channelTerm = computeChannelTerm(problem,expnBV)
+  kPMF = computeChannelTerm(problem,expnBV)
    
-  invk_ss = 1/problem.p_a * (1/problem.k_E_ss + channelTerm)
+  invk_ss = 1/problem.p_a * (1/problem.k_E_ss + 1/kPMF)
   # print "p_a %f " % problem.p_a
 
   k_ss = float(1/invk_ss)
@@ -58,8 +65,9 @@ def slow_ligandindep(problem):
 # eqn 3.24a assuming kappa0=inf
 def fast(problem):
   computeVeff(problem)
-  channelTerm = computeChannelTerm(problem,problem.expnBVeff)
-  invk_if_ss = (1/problem.k_E_ss + channelTerm)
+  kPMF = computeChannelTerm(problem,problem.expnBVeff)
+  #print "kPMF %e" % kPMF 
+  invk_if_ss = (1/problem.k_E_ss + 1/kPMF)
 
   k_if_ss = float(1/invk_if_ss)
   return k_if_ss

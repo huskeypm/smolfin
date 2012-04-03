@@ -8,7 +8,8 @@ import InteriorProblemMaster
 import numpy as np
 from params import * # must do this for class
 
-parms = params()
+#parms = params()
+parms = smol.parms
 problem = smol.problem
 
 class empty:pass
