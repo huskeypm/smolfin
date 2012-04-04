@@ -170,7 +170,6 @@ def ValidationSphere(useStored=0):
   if(useStored==0):
     chargedresult = smol.Run(problem,pvdFileName="sphere_charge.pvd")
     plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
-    print chargedresult.kon
   else:
     print "Using stored values DONT TRUST";
     chargedresult = empty()
@@ -196,9 +195,19 @@ def ValidationSphere(useStored=0):
   ## results
   i =0 # where V0 = -5 
   scale = 1.0e9 # normalization in figures 
-  print "Sphere(%e) & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (scale,unchargedresult.kon/scale,chargedresult.kon/scale,k_lp[i]/scale,k_gs[i]/scale) 
-  print "Sphere & %3.1e & %3.e &  & %3.e & %3.e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]/1) 
+  msg = []
+  m = "Sphere(%1e) & %3.1e & %3.1e &  %3.1e & %3.1e & NA \\\\" % (
+    scale,
+    unchargedresult.kon/scale,
+    chargedresult.kon/scale,
+    k_lp[i]/scale,
+    k_gs[i]/scale) 
 
+  msg.append(m) 
+  m = "Sphere & %3.1e & %3.1e &  %3.1e & %3.1e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]/1) 
+  msg.append(m) 
+ 
+  return msg
 
 if __name__ == "__main__":
   msg="smol.py run "
@@ -214,10 +223,17 @@ if __name__ == "__main__":
     ValidateLinearPotential(4.)
     #ValidationTnC(useStored=1)
   elif(sys.argv[1]=="run"):
-    ValidationSphere(useStored=0)
-    serca.Validation(useStored=0)
-    troponin.Validation(useStored=0)
-
+    m1 = ValidationSphere(useStored=0)
+    m2 = serca.Validation(useStored=0)
+    m3 = troponin.Validation(useStored=0)
+    print "WARNING: charged values for sphere printing twice instead of unchagrged"
+    for i in m1:
+      print i 
+    for i in m2:
+      print i 
+    for i in m3:
+      print i 
+    
   else:
     raise RuntimeError(msg)
 

@@ -69,7 +69,7 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useStored=0):
     if (useStored==1):
       print "In debugging mode so skipping computation of smol. WARNING: results are wrong anyway!"
       results = empty()
-      results.kon = 1 # for debugging 
+      results.kon = 1e9 # for debugging 
     else:
       results = 0
 
@@ -102,12 +102,26 @@ def Validation(useStored=0):
     problem.filePotential= unchgRoot+"_values.xml.gz"
     nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName=unchgRoot+".pvd",useStored=useStored)
 
-    print "SERCA & %3.1e & %3.1e &  & %3.1e & %3.1e & %3.1e \\\\" % (
+    msg=[]
+    m = "SERCA & %3.1e & %3.1e & %3.1e & %3.1e & %3.1e \\\\" % (
       unchargedresult.kon,
       chargedresult.kon,
       chargedresult.kss,
       chargedresult.k_g,
       nolipidchargedresult.kon)
+    msg.append(m)
+
+    scale = 1.e9
+    m = "SERCA(%1e) & %3.1e & %3.1e &  & %3.1e & %3.1e & %3.1e \\\\" % (
+      scale,
+      unchargedresult.kon/scale,
+      chargedresult.kon/scale,
+      chargedresult.kss/scale,
+      chargedresult.k_g/scale,
+      nolipidchargedresult.kon/scale)
+    msg.append(m)
+
+    return msg
 
 
 # pmf - refers to output from WHAM 

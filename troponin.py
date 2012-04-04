@@ -24,7 +24,7 @@ def TnCIsolated(problem,useStored=0):
     if (useStored==1):
       print "In debugging mode so skipping computation of smol. WARNING: results are wrong anyway!"
       results = empty()
-      results.kon = 1 # for debugging 
+      results.kon = 2.2e10 # for debugging 
     else:
       results = 0
 
@@ -99,11 +99,25 @@ def Validation(useStored=0):
     resultstroponin = TnCTroponin(problem,boundaries=boundaries,useStored=useStored)
     #resultstroponin = TnCTroponin(problem,useStored=useStored)
 
-    print "TnC   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
+    scale = 1.e9
+    msg = []
+    m = "TnC   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
       unchargedresultsisolated.kon,
       chargedresultsisolated.kon,
       chargedresultsisolated.kss,
       resultstroponin.kon)
+    msg.append(m) 
+
+    m = "TnC(%1e)   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
+      scale,
+      unchargedresultsisolated.kon/scale,
+      chargedresultsisolated.kon/scale,
+      chargedresultsisolated.kss/scale,
+      resultstroponin.kon/scale)
+    msg.append(m) 
+    return msg
+ 
+    
 
 
 
