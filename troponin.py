@@ -36,8 +36,9 @@ def TnCIsolated(problem,useStored=0):
     # interior 
     problem.filePMF = root+".pmf"
     print "%s" %("NEED TO USE DIFF. SIGMA DEFINITION FOR TNC - DONT TRUST RESULTS UNTIL THEN") 
-    problem.channelR = 10  # 10 Ang^2
+    problem.channelR = 5  # 10 Ang^2
     problem.D = parms.D
+    problem.Dchannel = parms.Dchannel
     problem.x0 = 2;   # In binding site (Dist [AA] between E76 and Ca)
     problem.x0 = 3.6;   # In binding site (Dist [AA] between E76 and Ca)
     problem.xL = 4.3; # Just before rapid increase in PMF (5.5) 
@@ -101,19 +102,19 @@ def Validation(useStored=0):
 
     scale = 1.e9
     msg = []
-    m = "TnC   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
-      unchargedresultsisolated.kon,
-      chargedresultsisolated.kon,
-      chargedresultsisolated.kss,
-      resultstroponin.kon)
-    msg.append(m) 
 
-    m = "TnC(%1e)   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
+    m = "TnC(%1e)   & %7.5f & %7.5f  & %7.5f & NA   & %7.5f \\\\" % (
       scale,
       unchargedresultsisolated.kon/scale,
       chargedresultsisolated.kon/scale,
       chargedresultsisolated.kss/scale,
       resultstroponin.kon/scale)
+    msg.append(m) 
+    m = "TnC   & %3.1e & %3.1e  & %3.1e & NA   & %3.1e \\\\" % (
+      unchargedresultsisolated.kon,
+      chargedresultsisolated.kon,
+      chargedresultsisolated.kss,
+      resultstroponin.kon)
     msg.append(m) 
     return msg
  

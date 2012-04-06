@@ -109,7 +109,12 @@ def  ValidateLinearPotential(kon_ext):
   kPMFs = np.zeros(num)
 
   for i in range(num):
-    linearIntProb = LinearInteriorProblem(V0=V0s[i])
+    linearIntProb = LinearInteriorProblem(
+      V0=V0s[i], 
+      L = 10,
+      channelR = 5,
+      diff_const=parms.Dchannel
+    )
     result=InteriorProblemMaster.Run(problem,InteriorObject=linearIntProb)
     invkPMFs[i] = result.invkPMF
     kPMFs[i] = result.kPMF
@@ -128,13 +133,54 @@ def  ValidateLinearPotential(kon_ext):
   plt.ylabel("$k_{ss}/k_E$ [1/Ms]",fontsize=journalfig.fontSize)
   plt.xlabel('$V_0$ [kcal/mol]',fontsize=journalfig.fontSize)
   plt.plot(V0s,k_ss/k_E_ss, 'k-', color='black')
-  #journalfig.ax.set_yscale('log')
+  journalfig.ax.set_yscale('log')
   F = plt.gcf()
   F.savefig("fig1c_sphere.png")
 
   
 
   return k_ss
+
+def ValidationChargedSphere(problem,root,useStored=1):
+  ## w electro 
+  # problem (do once using defaults)  
+  problem.filePotential= root+"_values.xml.gz"
+  if(useStored==0):
+    chargedresult = smol.Run(problem,pvdFileName="sphere_charge.pvd")
+    plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
+  else:
+    print "Using stored values DONT TRUST";
+    chargedresult = empty()
+    chargedresult.kon = 1.818060e+10
+
+
+  # doa couple times using different values 
+  qs = np.array([1.0,0.6, 0.0, -0.6, -1.0])
+  kons = np.zeros(np.size(qs))
+  msgs=[]
+  #for q in qs:
+  #  chargedresult = smol.Run(problem,pvdFileName="temp.pvd",q=q)
+  #  msgs.append("q=%f kon=%e [1/Ms] %e [1/Mmin]" % (q,chargedresult.kon,chargedresult.kon*60))
+#
+#  for m in msgs:
+#    print m
+
+  # results 
+  R = parms.Rsphere
+  q = parms.qsphere
+  D = parms.D
+  # from (18) of Song 
+  #parms.D = 780 # 7.8 e4 A^2/us --> [um/s]
+  #R = 8e-4 # 8 A --> 8e-4 um
+  c= 4207955.8011049731 # value need to match Song paper for D=780, R= 8 A, z*z = 1 TODO
+  Q_debye = 7; # [A] See notes from 120405 I think, where Debye shows Q = 7 A for monovalent ions 
+  qEff = Q_debye * q
+  r_Ang = parms.um_to_Ang * R
+  kon_elec = 4 * np.pi * D * qEff * (np.exp(qEff/r_Ang)/(np.exp(qEff/r_Ang)-1)) * c
+  kon_pred = chargedresult.kon*60. # 60 [s/min]
+  print "VERIFY kon_anal %e pred %e [1/M min]" % (kon_elec, kon_pred)
+
+  return chargedresult
 
  
 # all validation cases (Fig 1s)
@@ -143,9 +189,6 @@ def ValidationSphere(useStored=0):
   root = "/home/huskeypm/scratch/validation/sphere/sphere"
   problem.fileMesh = root+"_mesh.xml.gz"
   problem.fileSubdomains= root+"_subdomains.xml.gz"
-  R = 12.5# [Ang]
-  R = R / 10000  # [um]
-  q = -1  # qlig * qprot [1/C]
 
   ## No electro 
   # problem 
@@ -157,32 +200,16 @@ def ValidationSphere(useStored=0):
   else:
     print "Using stored values DONT TRUST"
     unchargedresult = empty()
-    unchargedresult.kon = 9.274149e+08
+    unchargedresult.kon = 3.689228e+09
+
   
   # results 
+  R = parms.Rsphere
   kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_M
   print "kon_anal %e pred %e " % (kon_analy, unchargedresult.kon)
 
-
-  ## w electro 
-  # problem 
-  problem.filePotential= root+"_values.xml.gz"
-  if(useStored==0):
-    chargedresult = smol.Run(problem,pvdFileName="sphere_charge.pvd")
-    plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
-  else:
-    print "Using stored values DONT TRUST";
-    chargedresult = empty()
-    chargedresult.kon = 1.603999e+09
-
-  # results 
-  # from (18) of Song 
-  parms.D = 780 # 7.8 e4 A^2/us --> [um/s]
-  R = 8e-4 # 8 A --> 8e-4 um
-  kon_elec  = 4 * np.pi * parms.D * q * parms.bulk_conc * parms.um3_to_M
-  # assuming r2-->inf
-  kon_elec  = np.exp(q/R) / (np.exp(q/R) - np.exp(0)) 
-  print "VERIFY kon_anal %e pred %e " % (kon_elec, chargedresult.kon)
+  chargedresult = ValidationChargedSphere(problem,root,useStored=useStored) 
+  
 
   ## linear potential 
   k_lp = ValidateLinearPotential(chargedresult.kon)
@@ -196,7 +223,7 @@ def ValidationSphere(useStored=0):
   i =0 # where V0 = -5 
   scale = 1.0e9 # normalization in figures 
   msg = []
-  m = "Sphere(%1e) & %3.1e & %3.1e &  %3.1e & %3.1e & NA \\\\" % (
+  m = "Sphere(%1e) & %7.5f & %7.5f &  %7.5f & %7.5f & NA \\\\" % (
     scale,
     unchargedresult.kon/scale,
     chargedresult.kon/scale,

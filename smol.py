@@ -25,17 +25,27 @@ results = empty()
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-def ElectrostaticPMF(problem,psi):
+def ElectrostaticPMF(problem,psi,q="useparams"):
 
     problem.pmf = Function(problem.V)
     pmf = np.zeros( psi.vector().size() ) 
-    pmf[:] = parms.valence * psi.vector()[:]
+
+    if(q=="useparams"):
+      pmf[:] = parms.valence * psi.vector()[:]
+    else:
+      print "Using q=%f for the ligand" % q
+      pmf[:] = q * psi.vector()[:]
+
+    # Sanity check, otherwise need to make grid bigger to get 0 at boundary 
+    amin = np.min(pmf)
+    amax = np.max(pmf)
+    print "Potential range: %f - %f " %  (amin,amax)
+    if(amin * amax > 0):
+      print "WARNING: Your potential does not seem to cross through 0 (reguirement at outer boundary"
+
     
     # Not needed, givn how I formulated the PDE 
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
-    print "Min/Max of PMF are (%e,%e)" % (
-	np.min(pmf),
-    	np.max(pmf))
 
     # get too small
     THRESH=20
@@ -91,9 +101,8 @@ def ComputeKon(problem,results):
     #print "Warning: using correction until i get units right. "
     #print "Based on smol for sphere w/o charge. "
     #print "Is something wrong w scaling by bulk conc?"
-    correction = -61367.67
-    kon = kon * correction
-    print "kon: %e [1/Ms]" % (kon)
+    kon = kon * parms.correction
+    print "kon: %e [1/Ms] %e [1/M min]" % (kon, kon*60)
 
     results.kon = kon
     results.Jp  = Jp   
@@ -183,10 +192,10 @@ def ProblemDefinition(problem,boundaries=0):
 
 
 
-def SolveSteadyState(problem,pvdFileName="up.pvd"): 
+def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams"): 
 
     # Compute W, dW from psi
-    ElectrostaticPMF(problem,problem.psi)
+    ElectrostaticPMF(problem,problem.psi,q=q)
     V = problem.V
 
     # The solution function
@@ -200,7 +209,6 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
     # Recasting as integration factor (see Eqn (5) in Notes)
     intfact    =    exp(-parms.beta * problem.pmf)
     intfact_np = np.exp(-parms.beta * problem.pmf.vector()[:])
-    print "Potential range: %f - %f " %  (np.min(intfact_np), np.max(intfact_np))
 
     #invintfact = 1/intfact;
     # Create weak-form integrand (see eqn (6) in NOtes)
@@ -266,13 +274,13 @@ def SolveSteadyState(problem,pvdFileName="up.pvd"):
 ## Domain
 
 # boundaries - override markers used in mesh 
-def Run(problem,boundaries=0,pvdFileName="up.pvd"):
+def Run(problem,boundaries=0,pvdFileName="up.pvd",q="useparams"):
 
   # get stuff 
   problem = ProblemDefinition(problem,boundaries=boundaries)
 
   # solve PDE
-  results= SolveSteadyState(problem,pvdFileName=pvdFileName)
+  results= SolveSteadyState(problem,pvdFileName=pvdFileName,q=q)
   
   # compute something
   ComputeKon(problem, results)    

@@ -26,7 +26,7 @@ class empty:pass
 #
 def Run(problem,InteriorObject=0):
   if(InteriorObject==0):
-      interProb = DefaultInteriorProblem(problem.filePMF,channelR=problem.channelR,diff_const=problem.D,x0=problem.x0,xL=problem.xL)
+      interProb = DefaultInteriorProblem(problem.filePMF,channelR=problem.channelR,diff_const=problem.Dchannel,x0=problem.x0,xL=problem.xL)
       print "Here"
   else:
       interProb = InteriorObject

@@ -35,8 +35,9 @@ def Setup():
     # pmf 
     problem.filePMF = root+".pmf"
     problem.diameter = 10 # AA
-    problem.channelR = problem.diameter
+    problem.channelR = problem.diameter/2
     problem.D = parms.D
+    problem.Dchannel = parms.Dchannel
     problem.x0 = 2;
     problem.xL = 25;
 
@@ -103,22 +104,22 @@ def Validation(useStored=0):
     nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName=unchgRoot+".pvd",useStored=useStored)
 
     msg=[]
-    m = "SERCA & %3.1e & %3.1e & %3.1e & %3.1e & %3.1e \\\\" % (
-      unchargedresult.kon,
-      chargedresult.kon,
-      chargedresult.kss,
-      chargedresult.k_g,
-      nolipidchargedresult.kon)
-    msg.append(m)
 
     scale = 1.e9
-    m = "SERCA(%1e) & %3.1e & %3.1e &  & %3.1e & %3.1e & %3.1e \\\\" % (
+    m = "SERCA(%1e) & %7.5f & %7.5f  & %7.5f & %7.5f & %7.5f \\\\" % (
       scale,
       unchargedresult.kon/scale,
       chargedresult.kon/scale,
       chargedresult.kss/scale,
       chargedresult.k_g/scale,
       nolipidchargedresult.kon/scale)
+    msg.append(m)
+    m = "SERCA & %3.1e & %3.1e & %3.1e & %3.1e & %3.1e \\\\" % (
+      unchargedresult.kon,
+      chargedresult.kon,
+      chargedresult.kss,
+      chargedresult.k_g,
+      nolipidchargedresult.kon)
     msg.append(m)
 
     return msg
