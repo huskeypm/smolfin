@@ -116,7 +116,7 @@ def Run(problem,result=0):
   problem.k_E_ss = result.kon # TODO keep consistent
   
   print "TODO: Need to est. characteristic diff time"
-  parms.td = 10e-8 # [s] 
+  parms.td = 3e-10 #  for 10 A , 780 D [s] 
   problem.w = problem.wa + problem.wr
   invw = 1/problem.w
   
