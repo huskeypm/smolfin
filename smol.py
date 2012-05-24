@@ -94,7 +94,7 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
       solutionVector=results.up
    
     # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
-    Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
+    #Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
 
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)

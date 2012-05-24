@@ -6,10 +6,14 @@ import numpy
 from apbstodolfin import *
 from mcsftodolfin import *
 from smol import * 
+from view import plotslicegeneral
 
 writePotentialOnly=0
 interpMethod="linear"
 #interpMethod="nearest"
+
+def get_range(mesh):
+  return np.ceil(max(np.max(mesh.coordinates(),0) - np.min(mesh.coordinates(),0))/2)
 
 def write_smol_files(filename, mesh,u,writePotentialOnly=0): # , u,vertexmarkers,facetmarkers):
     from dolfin import File
@@ -36,6 +40,53 @@ def ClipValues(pot, THRESH=999):
       pot[ idx ] = THRESH
   
 
+
+# apbsfilename - dx file from apbs
+# coordinates - array of 3d coordinates 
+def interpolate_dx(apbsfilename,coordinates,mvalues=-1):
+    print "Reading APBS file %s" % apbsfilename
+    if not ".dx" in apbsfilename:
+      import sys
+      raise RuntimeError("File format not recognized (need dx)")
+
+    # read in data 
+    import sys, random
+    from potentialextraction import  Vgrid
+    file = open(apbsfilename, "r")
+    dims = (None, None, None)
+    spac = (None, None, None)
+    origin = (None, None, None)
+    n = None
+    data = []
+    vgrid = Vgrid(dims, spac, origin, data)
+    vgrid.readOpenDX(file)
+    file.close()
+
+    nEle = np.shape(coordinates)[0]
+    if(mvalues==-1):
+      mvalues = np.zeros((nEle,3))
+
+    ## do interpolation 
+    for i in range(nEle):
+      #print coordinates[i,:]
+      #print i 
+      (x,y,z) = (coordinates[i,0],coordinates[i,1],coordinates[i,2])
+      #mvalues.append(vgrid.value((x,y,z)))
+      mvalues[i] = vgrid.value((x,y,z))
+
+    ### cleaning up bad pixes 
+    #bad = np.where(np.isnan(mvalues))
+    #bad = bad[0]
+#
+#
+#    if(np.size(bad) > 0):
+#      print "Found %d bad entries, which suggest APBS grid does not overlap with FE grid." % np.size(bad)
+#      print "Replacing these regions with 0.0 for the time being"
+#      mvalues[bad] = 0.0
+#      #print mvalues
+
+
+    return mvalues
 
 # interpolate Finite difference APBS mesh onto finite element mesh
 # replaces nan with 0.0
@@ -119,10 +170,60 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
 
     return mvalues
 
+def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=[0,0,0]):
+    if(np.linalg.norm(mgridloc) > 0):
+      print "Need to reimplement mgridloc"
+      quit()
+
+
+    print "WARNING: there is still something funkly going on with the interpolation. This needs to be fixed!"
+    quit()
+    
+    mcoordinates = mesh.coordinates()
+    mvalues = np.zeros( len(mcoordinates[:,0]) ) 
+    coverage= np.zeros( len(mcoordinates[:,0]) ) 
+    prevRes =9999;
+    range = get_range(mesh)
+ 
+    print "WARNING: Be sure to read lowest resolution mesh first, second lowest next, etc"
+
+
+    # starting from lowest resolution and working toward high, 
+    # interpolate coordinates that exist within the apbs grid  
+    # all other values are assigned nan. We'll replace all non-nan
+    # values
+    i=0
+    for apbsfilename in apbsfilenames:
+      # do interpolation 
+      values = interpolate_dx(apbsfilename,mcoordinates)
+  
+      # only pull out the values that were interpolated 
+      goodidx = np.where(np.isnan(values)==False)
+      goodidx = goodidx[0]
+     
+      # store interpolated values 
+      mvalues[goodidx] = values[goodidx]
+
+      # here we just mark the interpolated mesh do determine where we actually 
+      i+=1
+      coverage[goodidx] = i * 1.0    
+
+      plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png",range=range)
+      print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
+
+   # plot coverage
+    plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
+
+    return mvalues
+
+
+
 # use for interpolating form FD apbs files 
-def InterpolateAPBSFiles(apbsfilenames,mgridloc=[0,0,0]):
+def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=[0,0,0]):
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     prevRes =9999;
+
+
     for apbsfilename in apbsfilenames:
       #print "Reading %s" % apbsfilename 
      
@@ -151,7 +252,6 @@ def InterpolateAPBSFiles(apbsfilenames,mgridloc=[0,0,0]):
       #print "%d->%d" % (len(zidx),len(zidxn))
     
       # hack to visualize
-      from view import plotslicegeneral
       plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png")
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
           #print np.isnan(mvalues)
@@ -226,6 +326,9 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0], csvfilename
     ClipValues(mvalues,THRESH=maxPotent)
  
      
+    from view import plotslicegeneral
+    range = get_range(mesh)
+    plotslicegeneral(mesh.coordinates(),mvalues,fileName="final.png",range=range)
     print "Final: Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
 
 
@@ -256,7 +359,6 @@ if __name__ == "__main__":
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
         mcsffilename = sys.argv[i+1]
-        print "Here"
         problem.mesh= read_and_mark(mcsffilename)
 
       if(sys.argv[i] == '-mesh'):

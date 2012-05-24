@@ -33,6 +33,8 @@ def computeVeff(problem):
 
 # expnBV = exp(-BV) term 
 def slow(problem, expnBV):
+  print "WARNING: something isn't scaled right. Need to dbl check w simple ex"
+  quit()
   
   kPMF = computeChannelTerm(problem,expnBV)
    

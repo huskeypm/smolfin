@@ -57,13 +57,12 @@ def JournalFig(scale=4): # this is the scaleup needed for DPI
 def plotslice(problem,result,title="no title",fileName="slice.png",show=0):
     plotslicegeneral(problem.mesh.coordinates(),result.up.vector(),title=title,fileName=fileName,show=show)
 
-def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0):
+def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,range=50):
     import numpy as np
     #meshcoor = problem.mesh.coordinates()
     
     # assuming molecule is within 50 of middle of grid 
     # want 500 points in each dir (resolution)
-    range = 50
     numpt = 500
     incr = numpt/ (2 * range) 
     #(grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(incr*1j),-range:range:(incr*1j)]

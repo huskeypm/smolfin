@@ -279,14 +279,11 @@ def do_checks(mesh,subdomains):
     molidx = np.where(markedall.vector()[:] > 0)
 
     # extremes
-    #mol = empty()
-    #mol.coor = coor[molidx]
-    #mol.min = np.min(mol.coor,axis=0)
-    #mol.max = np.max(mol.coor,axis=0)
-    #mol.dim = mol.max - mol.min 
     mol = meshgeoms(mesh,idx=molidx)
 
     actidx = np.where(marked0.vector()[:] > 0)
+    if(len(actidx[0]) < 1):
+      print "No active site!!"
     act = meshgeoms(mesh,actidx) 
 
     # check if range contains (0,0,0) which indicates we pass through origin
@@ -360,12 +357,16 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0):
 
 
 
-    V = FunctionSpace(mesh, "CG", 1)
 
     # marking is actually done inside smo.py
     #bc0 = DirichletBC(V, Constant(active_site_absorb), subdomains,active_site_marker)
+    #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
+    # subdomains.set_all(3) # mark facets as sub domain 3
+    write_dolfin_files(filename.replace(".m", ""), mesh)
 
+    # Test
     test =1 
+    V = FunctionSpace(mesh, "CG", 1)
     from view import PrintBoundary
     if(test==1):
       # surface w no marker
@@ -385,9 +386,6 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0):
     do_checks(mesh,subdomains)
 
 
-    #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
-    # subdomains.set_all(3) # mark facets as sub domain 3
-    write_dolfin_files(filename.replace(".m", ""), mesh)
 
     # test (this works) 
     #from dolfin import Mesh, FunctionSpace, DirichletBC
@@ -414,9 +412,9 @@ if __name__ == "__main__":
     filename = sys.argv[1]
 
     if(sys.argv==3):
-      mesh = read_and_mark(filename)
-    else:
       mesh = read_and_mark(filename,rescaleCoor=sys.argv[2])
+    else:
+      mesh = read_and_mark(filename)
     
 #mcsffile = "p.pqr.output.all.m"
 #coordinates,cells, markers = read_mcsf(mcsffile)
