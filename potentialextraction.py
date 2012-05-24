@@ -31,6 +31,7 @@
 # 
 # 
 
+import numpy as np
 import math, string
 class Vgrid:
    def __init__(self, dims, spac, origin, data, colMajor=1):
@@ -77,11 +78,15 @@ class Vgrid:
            ii = index[i]
            if (ii >= self.dims[i]) or (i < 0):
                errstr = "Index element %d (%d) out of range!\n" % (i, ii)
+               errstr += "This means FD mesh doesnt overlap point"
                raise IndexError, errstr
+               #return (0,0)     
        if self.colMajor:
            u = (index[2]*self.dims[0]*self.dims[1]) + (index[1]*self.dims[0]) + index[0]
        else:
            u = (index[0]*self.dims[2]*self.dims[1]) + (index[1]*self.dims[2]) + index[2]
+
+       #return (1,u)
        return u
 
    def value(self, pt):
@@ -126,14 +131,24 @@ class Vgrid:
        dy = jfloat - float(jlo);
        dz = kfloat - float(klo);
 
-       u =      dx *     dy *     dx *self.data[self.ijk2u((ihi,jhi,khi))] \
-         +      dx *(1.0-dy)*     dx *self.data[self.ijk2u((ihi,jlo,khi))] \
-         +      dx *     dy *(1.0-dx)*self.data[self.ijk2u((ihi,jhi,klo))] \
-         +      dx *(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ihi,jlo,klo))] \
-         + (1.0-dx)*     dy *     dx *self.data[self.ijk2u((ilo,jhi,khi))] \
-         + (1.0-dx)*(1.0-dy)*     dx *self.data[self.ijk2u((ilo,jlo,khi))] \
-         + (1.0-dx)*     dy *(1.0-dx)*self.data[self.ijk2u((ilo,jhi,klo))] \
-         + (1.0-dx)*(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ilo,jlo,klo))]
+       # check if on grid
+       #(result,u) = self.ijk2u((ihi,jhi,khi))
+       #if(result==0):
+       #  return nan 
+       if ((ihi<nx) and (jhi<ny) and (khi<nz) and (ilo>=0) and (jlo>=0) and (klo>=0)) :
+
+
+         u =      dx *     dy *     dx *self.data[self.ijk2u((ihi,jhi,khi))] \
+           +      dx *(1.0-dy)*     dx *self.data[self.ijk2u((ihi,jlo,khi))] \
+           +      dx *     dy *(1.0-dx)*self.data[self.ijk2u((ihi,jhi,klo))] \
+           +      dx *(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ihi,jlo,klo))] \
+           + (1.0-dx)*     dy *     dx *self.data[self.ijk2u((ilo,jhi,khi))] \
+           + (1.0-dx)*(1.0-dy)*     dx *self.data[self.ijk2u((ilo,jlo,khi))] \
+           + (1.0-dx)*     dy *(1.0-dx)*self.data[self.ijk2u((ilo,jhi,klo))] \
+           + (1.0-dx)*(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ilo,jlo,klo))]
+
+       else:
+         return np.nan
 
        return u
 

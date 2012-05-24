@@ -85,16 +85,22 @@ def Test():
 # See eqn (4) of Notes
 # following example on pg 619
 # if sphere, validate against analytical result (see 111128_todo)
-def ComputeKon(problem,results):
- 
+def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVector=-1):
+    ## smol defaults
+    if(subdomainMarker==-1):
+      parms.active_site_marker
+
+    if(useSolutionVector==0):
+      solutionVector=results.up
+   
     # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
     Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
 
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
-    Jp = parms.D * grad(results.up) + parms.beta * results.up * grad(problem.pmf)
+    Jp = parms.D * grad(solutionVector) + parms.beta * solutionVector * grad(problem.pmf)
 
-    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(parms.active_site_marker),
+    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker),
                                 exterior_facet_domains = problem.subdomains)
     kon = boundary_flux_terms / float(parms.bulk_conc);
 
@@ -106,6 +112,8 @@ def ComputeKon(problem,results):
 
     results.kon = kon
     results.Jp  = Jp   
+ 
+    return kon
 
 # from (2.10) of Berez 
 # problem s.b. globally defined, so we don't have to pass it in separately
@@ -159,23 +167,12 @@ def ProblemDefinition(problem,boundaries=0):
 
   ## assign BC 
   # NOTE: if doing the time-dependent solution, will need to update this at every time step 
-  #if(exteriorProblem==0):
-    # assign usual absorbing condition 
   bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
-  #else: # PKH - uncommented, since I think Zhou ends up keeping using absorbing condition on exterior prob. and imposing
-         # boundary cond on the interior problem, instead (see 2.16)
-  #  # assign eqn (2.10) of Berez reference 
-  #  # hopefully this is the correct way to pass it in 
-  #  bc0 = DirichletBC(V,InterfaceFunction,subdomains,parms.active_site_marker)
-
   bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
 
   # override with definition 
   if(boundaries!=0):
     print "Overriding marked boundaries with user definition (test with testboundaries.py)"
-    #activeSite = bound.ActiveSite()
-    #bulkBoundary = bound.BulkBoundary()
-    #molecularBoundary = bound.MolecularBoundary() # i think we can ignore, since zero anyway 
     bc0 = DirichletBC(V,Constant(parms.active_site_absorb),boundaries.activeSite)
     bc1 = DirichletBC(V,Constant(parms.bulk_conc),boundaries.bulkBoundary)
  
@@ -192,14 +189,20 @@ def ProblemDefinition(problem,boundaries=0):
 
 
 
-def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams"): 
+def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams",twoEnzymeVer=0): 
 
-    # Compute W, dW from psi
-    ElectrostaticPMF(problem,problem.psi,q=q)
     V = problem.V
 
+    # Compute W, dW from psi
+    if(twoEnzymeVer==0):
+      ElectrostaticPMF(problem,problem.psi,q=q)
+    else:
+      problem.pmf = Function(V) 
+      problem.pmf.vector()[:] = 0.
+      
+
     # The solution function
-    u = Function(V)
+    u = TrialFunction(V)
 
     # Test function
     v = TestFunction(V)
@@ -210,16 +213,19 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams"):
     intfact    =    exp(-parms.beta * problem.pmf)
     intfact_np = np.exp(-parms.beta * problem.pmf.vector()[:])
 
-    #invintfact = 1/intfact;
-    # Create weak-form integrand (see eqn (6) in NOtes)
-    # also refer ti Zhou eqn 2,3 uin 2011
-    # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
-    # form of the PDE
-    #  (no time dependence,so only consider del u del v term)
 
     #F = parms.D * intfact*inner(grad(u), grad(v))*dx
     # F=0 anyway, so can just solve grad portion
-    F = inner(grad(u),grad(v))*dx
+    if(twoEnzymeVer==0):
+      print "WARNING: changed F/L defs, so may not work for resgular case"
+      F = inner(grad(u),grad(v))*dx
+      L = 0 
+
+    if(twoEnzymeVer==1):
+      F = inner(grad(u),grad(v))*dx(1)
+      beta = Constant(0.)
+      L = inner(beta,v)*ds  # (1)
+
 
     #print "Trying different form...."
     #F = parms.D * intfact*inner(grad(invintfact * u), grad(v))*dx
@@ -232,26 +238,21 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams"):
 
     # Solve the problem
     # prob. is linear in u, so technically don't need to use a non-linear solver....
-    solve(F==0, u, problem.bcs)
+    x = Function(V)
+    solve(F==L, x, problem.bcs)
 
-
-    # PKH: do I need to apply the initial condition? 
-    # u_1 = params.bulk_conc * exp(-beta * pmf)
-    # u_1.assign(u) # following pg 50 of Logg 
-
-    
 
     # Project the solution
     # Return projection of given expression *v* onto the finite element space *V*
     # Solved for u that satisfies Eqn 6, so obtain u we want by transformation (See Eqn (7))
-    up = project(intfact*u)
-    print "Unprojected Solution range: %f - %f " %  (min(u.vector()),max(u.vector()))
+    up = project(intfact*x)
+    print "Unprojected Solution range: %f - %f " %  (min(x.vector()),max(x.vector()))
     # gives non-negative values 
     #print "Projecting on difference basis"
     #up = project(intfact*u,FunctionSpace(problem.mesh,"DG",0))
     # overriding project with simply numpy op (to avoid issues w basis)
     #up.vector()[:] *= np.exp(-potential/kT) 
-    up.vector()[:] = u.vector()[:] * intfact_np[:]
+    up.vector()[:] = x.vector()[:] * intfact_np[:]
     results.up = up
 
     # debug
