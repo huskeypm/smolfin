@@ -1,12 +1,16 @@
 import matplotlib.pyplot as plt
 class empty:pass
 
-def PrintBoundary(mesh, boundary,file="marked"):
+def PrintBoundary(mesh, boundaries,file="marked"):
   from dolfin import FunctionSpace, Function, File, plot
   V = FunctionSpace(mesh, "CG", 1)
   
   marked = Function(V)
-  boundary.apply(marked.vector())
+  marked.vector()[:]=0
+  for i,boundary in enumerate(boundaries):
+    marked1 = Function(V)
+    boundary.apply(marked1.vector())
+    marked+=marked1
 
   #nummrked = (subdomains.array()==1).sum()
   #print "Num marked entries:"% nummrked

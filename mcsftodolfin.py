@@ -315,7 +315,7 @@ def do_checks(mesh,subdomains):
 # no mark skips the domain marking, etc (workaround for a local problem)
 # rescaleCoor requests isotropic scaling of the mesh coordinates (meshNew = meshOld * rescaleCoor)
 def read_and_mark(filename, nomark=0,rescaleCoor=0):
-    from dolfin import FacetFunction,MeshFunction, DirichletBC, Constant, FunctionSpace
+    from dolfin import MeshFunction, DirichletBC, Constant, FunctionSpace
 
     # read mesh 
     coordinates, cells, cellmarkers, vertmarkers = read_mcsf_file(filename)
@@ -347,7 +347,7 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0):
     # mark all boundaries 
     fixhack=0
     if(fixhack==1):
-      from dolfin import UnitCube
+      from dolfin import FacetFunction,UnitCube
       mesh = UnitCube(8,8,8)
       print "Forcing boundaries to have value at exterior [overridden by file]"
       neumann_boundary = NeumannBoundaryHack() 
@@ -411,7 +411,7 @@ if __name__ == "__main__":
         raise RuntimeError("expected an mcsf file as second argument (or optional rescale value as third arg)")
     filename = sys.argv[1]
 
-    if(sys.argv==3):
+    if(len(sys.argv)==2):
       mesh = read_and_mark(filename,rescaleCoor=sys.argv[2])
     else:
       mesh = read_and_mark(filename)

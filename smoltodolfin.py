@@ -114,7 +114,8 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
     apbs.values[:] = pot[:]
 
     ## shifting apbs values to align with grid 
-    apbs.meshcoordinates = apbs.coordinates + mgridloc
+    if(len(mgridloc)>1):
+      apbs.meshcoordinates = apbs.coordinates + mgridloc
     
 
     ## interpolations 
@@ -170,7 +171,7 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
 
     return mvalues
 
-def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=[0,0,0]):
+def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
     if(np.linalg.norm(mgridloc) > 0):
       print "Need to reimplement mgridloc"
       quit()
@@ -219,7 +220,7 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=[0,0,0]):
 
 
 # use for interpolating form FD apbs files 
-def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=[0,0,0]):
+def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=-1):
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     prevRes =9999;
 
@@ -252,6 +253,7 @@ def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=[0,0,0]):
       #print "%d->%d" % (len(zidx),len(zidxn))
     
       # hack to visualize
+      from view import plotslicegeneral
       plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png")
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
           #print np.isnan(mvalues)
@@ -292,7 +294,7 @@ def readapbscsv(mesh,csvfilename):
     return mvalues
 
 # csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
-def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0], csvfilename="none"):
+def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none"):
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
@@ -305,8 +307,6 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=[0,0,0], csvfilename
     if(csvfilename!="none"): 
       mvalues = readapbscsv(mesh,csvfilename)
     
-
-
     else:
       mvalues = InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=mgridloc)
 
