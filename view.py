@@ -4,17 +4,20 @@ class empty:pass
 def PrintBoundary(mesh, boundaries,file="marked"):
   from dolfin import FunctionSpace, Function, File, plot
   V = FunctionSpace(mesh, "CG", 1)
+ 
+  # make into list
+  if(isinstance(boundaries,(list))):
+    dalist = boundaries
+  else:
+    dalist = [boundaries]
   
   marked = Function(V)
   marked.vector()[:]=0
-  for i,boundary in enumerate(boundaries):
+  for i,boundary in enumerate(dalist):
+    print "sdfsf"
     marked1 = Function(V)
     boundary.apply(marked1.vector())
-    marked+=marked1
-
-  #nummrked = (subdomains.array()==1).sum()
-  #print "Num marked entries:"% nummrked
-
+    marked.vector()[:] +=marked1.vector()[:]
 
   #plot(marked, interactive=1)
   
