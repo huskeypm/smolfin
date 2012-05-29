@@ -88,7 +88,7 @@ def Test():
 def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVector=-1):
     ## smol defaults
     if(subdomainMarker==-1):
-      parms.active_site_marker
+      subdomainMarker = parms.active_site_marker
 
     if(useSolutionVector==0):
       solutionVector=results.up
@@ -166,7 +166,6 @@ def ProblemDefinition(problem,boundaries=0):
   ## assign init cond??????
 
   ## assign BC 
-  # NOTE: if doing the time-dependent solution, will need to update this at every time step 
   bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
   bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
 
@@ -189,20 +188,26 @@ def ProblemDefinition(problem,boundaries=0):
 
 
 
-def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams",twoEnzymeVer=0): 
-
-    V = problem.V
+def SolveSteadyState(problem,pvdFileName="up.pvd",\
+      q="useparams",twoEnzymeVer=0): 
+  
 
     # Compute W, dW from psi
     if(twoEnzymeVer==0):
       ElectrostaticPMF(problem,problem.psi,q=q)
     else:
+      print "Overriding PMF"
       problem.pmf = Function(V) 
       problem.pmf.vector()[:] = 0.
-      
+
+    V = problem.V
 
     # The solution function
-    u = TrialFunction(V)
+    if(twoEnzymeVer==0):
+      u = Function(V)
+    else:
+      print "WARNING: havent the slightest why I can't use same call"
+      u = TrialFunction(V)
 
     # Test function
     v = TestFunction(V)
@@ -213,34 +218,40 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",q="useparams",twoEnzymeVer=0):
     intfact    =    exp(-parms.beta * problem.pmf)
     intfact_np = np.exp(-parms.beta * problem.pmf.vector()[:])
 
+    # Create weak-form integrand (see eqn (6) in NOtes)
+    # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
+    # form of the PDE
+    #  (no time dependence,so only consider del u del v term)
 
-    #F = parms.D * intfact*inner(grad(u), grad(v))*dx
-    # F=0 anyway, so can just solve grad portion
     if(twoEnzymeVer==0):
-      print "WARNING: changed F/L defs, so may not work for resgular case"
       F = inner(grad(u),grad(v))*dx
-      L = 0 
-
-    if(twoEnzymeVer==1):
+      L = 0
+    else:
       F = inner(grad(u),grad(v))*dx(1)
       beta = Constant(0.)
       L = inner(beta,v)*ds  # (1)
 
-
-    #print "Trying different form...."
-    #F = parms.D * intfact*inner(grad(invintfact * u), grad(v))*dx
 
     # apply Neumann cond 
     # since noflux --> boundary==0, don't need to include this?
     #f_molecular_boundary = noflux_molecular_boundary
     #F += f_molecular_boundary*v*ds(molecular_boundary_marker)
 
-
     # Solve the problem
     # prob. is linear in u, so technically don't need to use a non-linear solver....
-    x = Function(V)
-    solve(F==L, x, problem.bcs)
+    if(twoEnzymeVer==0):
+      solve(F==L, u, problem.bcs)
+      x = u
+    else:
+      x=Function(V)
+      solve(F==L, x, problem.bcs)
 
+
+    # PKH: do I need to apply the initial condition? 
+    # u_1 = params.bulk_conc * exp(-beta * pmf)
+    # u_1.assign(u) # following pg 50 of Logg 
+
+    
 
     # Project the solution
     # Return projection of given expression *v* onto the finite element space *V*
