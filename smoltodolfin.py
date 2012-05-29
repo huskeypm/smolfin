@@ -178,6 +178,9 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
 
 
     print "WARNING: there is still something funkly going on with the interpolation. This needs to be fixed!"
+    # Need to make simple (small number of vertices) dx file and coordinate, then compare smol version versus my version, value by value 
+    # It's possible that there's something about the dx reader that I don't understand or am not using correctly, 
+    # so maybe even need to very that the coordinates are the same between both dx files when read in  
     quit()
     
     mcoordinates = mesh.coordinates()

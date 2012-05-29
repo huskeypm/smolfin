@@ -55,6 +55,7 @@ def mark_neumann_facets(mesh, cellmarkers):
            marker = int(cellmarkers[j,i])
            facet_markers.set_value(cell.index(), i, marker)
 
+    print "WARNING: this is no longer working on virtual machine"
     subdomains = MeshFunction("uint", mesh, facet_markers)
     print "Num faces at active_site_marker:", \
           (subdomains.array()==parms.active_site_marker).sum()
