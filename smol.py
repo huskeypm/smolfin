@@ -190,17 +190,17 @@ def ProblemDefinition(problem,boundaries=0):
 
 def SolveSteadyState(problem,pvdFileName="up.pvd",\
       q="useparams",twoEnzymeVer=0): 
-  
 
+    V = problem.V
+  
     # Compute W, dW from psi
     if(twoEnzymeVer==0):
       ElectrostaticPMF(problem,problem.psi,q=q)
     else:
       print "Overriding PMF"
+      
       problem.pmf = Function(V) 
       problem.pmf.vector()[:] = 0.
-
-    V = problem.V
 
     # The solution function
     if(twoEnzymeVer==0):

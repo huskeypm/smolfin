@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 class empty:pass
 
 # mesh       - mesh  file (usually file_mesh.xml.gz)
@@ -35,8 +36,12 @@ def PrintBoundary(mesh, boundaries,file="marked"):
   marked = Function(V)
   marked.vector()[:]=0
   for i,boundary in enumerate(dalist):
+    print "Printing boundary %d" % i
     marked1 = Function(V)
     boundary.apply(marked1.vector())
+    tot = np.size(marked1.vector().array())
+    n = np.size(np.where(marked1.vector() >0)) # assuming 0 is unmarked
+    print "Marked %d/%d " % (n,tot)
     marked.vector()[:] +=marked1.vector()[:]
 
   #plot(marked, interactive=1)
