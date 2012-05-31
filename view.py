@@ -1,6 +1,27 @@
 import matplotlib.pyplot as plt
 class empty:pass
 
+# mesh       - mesh  file (usually file_mesh.xml.gz)
+# subdomains - facet file (usually file_subdomains.xml.gz)
+def PrintSubdomains(mesh,subdomains,file="subdomains"):
+  from dolfin import FunctionSpace, Function, File,DirichletBC,Constant
+  V = FunctionSpace(mesh, "CG", 1)
+
+  print "WARNING: still doesn't seem to mark boundaries correctly "
+
+  subdomidx =  list( set(subdomains.array()[:]) )
+  bcs = []
+  for i, idx in enumerate(subdomidx):
+    val = idx * 2.0
+    print "Found subdomain idx %d - marking as %f" % (idx,val)
+    bci = DirichletBC(V,Constant(val),subdomains,idx)
+    bcs.append(bci)
+
+  PrintBoundary(mesh,bcs,file=file)
+
+  
+
+
 def PrintBoundary(mesh, boundaries,file="marked"):
   from dolfin import FunctionSpace, Function, File, plot
   V = FunctionSpace(mesh, "CG", 1)
@@ -14,7 +35,6 @@ def PrintBoundary(mesh, boundaries,file="marked"):
   marked = Function(V)
   marked.vector()[:]=0
   for i,boundary in enumerate(dalist):
-    print "sdfsf"
     marked1 = Function(V)
     boundary.apply(marked1.vector())
     marked.vector()[:] +=marked1.vector()[:]

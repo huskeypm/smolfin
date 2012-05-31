@@ -412,7 +412,7 @@ if __name__ == "__main__":
         raise RuntimeError("expected an mcsf file as second argument (or optional rescale value as third arg)")
     filename = sys.argv[1]
 
-    if(len(sys.argv)==2):
+    if(len(sys.argv)==3):
       mesh = read_and_mark(filename,rescaleCoor=sys.argv[2])
     else:
       mesh = read_and_mark(filename)
