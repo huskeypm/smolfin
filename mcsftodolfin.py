@@ -93,6 +93,8 @@ def read_mcsf_file(filename):
   # simplices
   split   = lines[5].split()
   nsimps  = int(split[2].replace(';',''))
+  #print nverts
+  #print nsimps
   
   coordinates = []
   
@@ -100,11 +102,13 @@ def read_mcsf_file(filename):
   startidx = nheader 
   for i in np.arange(nverts):
     line = lines[i+startidx]
+    #print line
     split = line.split()
   
     coordinates.append(map(float, split[2:5]))
+    #print coordinates
     if len(coordinates[-1]) != 3:
-      raise RuntimeError("expected coordinate line of length 3, "\
+      raise RuntimeError("Verts: expected coordinate line of length 3, "\
                          "got %s"%line)
   
   print "Read %d vertices (of %d) "% (len(coordinates),nverts)
@@ -147,7 +151,8 @@ def read_mcsf_file(filename):
     ## handle cell markers 
     cells.append(map(int, vertexlist))  
     if len(cells[-1]) != 4:
-      raise RuntimeError("expected coordinate line of length 3, "\
+      print line
+      raise RuntimeError("Simps: expected coordinate line of length 3, "\
                          "got %s"%line)
   
   
@@ -315,7 +320,7 @@ def do_checks(mesh,subdomains):
 
 # no mark skips the domain marking, etc (workaround for a local problem)
 # rescaleCoor requests isotropic scaling of the mesh coordinates (meshNew = meshOld * rescaleCoor)
-def read_and_mark(filename, nomark=0,rescaleCoor=0):
+def read_and_mark(filename, nomark=0,rescaleCoor=0,writeMeshOnly=0):
     from dolfin import MeshFunction, DirichletBC, Constant, FunctionSpace
 
     # read mesh 
@@ -364,6 +369,9 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0):
     #write_dolfin_files(filename.replace(".m", ""), mesh, vertmarkers)
     # subdomains.set_all(3) # mark facets as sub domain 3
     write_dolfin_files(filename.replace(".m", ""), mesh)
+    if(writeMeshOnly==1):
+      print "Done!"
+      quit()
 
     # Test
     test =1 
@@ -411,9 +419,19 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise RuntimeError("expected an mcsf file as second argument (or optional rescale value as third arg)")
     filename = sys.argv[1]
+    rescaleCoor=0
+    writeMeshOnly=0
+   
+    # process args
+   
+    for i,arg in enumerate(sys.argv):
+      if(arg=="-writeMeshOnly"):
+        writeMeshOnly=1
+      if(arg=="-rescaleCoor"):
+        rescaleCoor = sys.argv[i+1]
 
     if(len(sys.argv)==3):
-      mesh = read_and_mark(filename,rescaleCoor=sys.argv[2])
+      mesh = read_and_mark(filename,rescaleCoor=rescaleCoor,writeMeshOnly=writeMeshOnly)
     else:
       mesh = read_and_mark(filename)
     
