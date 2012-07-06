@@ -105,9 +105,11 @@ class Vgrid:
        xmax = xmin+ float(nx-1)*hx
        ymax = ymin+ float(ny-1)*hy
        zmax = zmin+ float(nz-1)*hz
-       print "SDFS"
-       print pt
-       quit()
+       #print "SDFS"
+       #hzed = hz
+       #print  "%f %f %f %f %f %f %f %f %f %f %f %f \n" % \
+       # (nx,ny,nz, hx,hy,hzed, xmin,ymin,zmin, xmax,ymax,zmax);
+       #print pt
 
 
        ifloat = (pt[0] - xmin)/hx
@@ -129,6 +131,8 @@ class Vgrid:
        if math.fabs(pt[1] - ymax) < 0.0:  jhi = ny - 1
        if math.fabs(pt[2] - zmax) < 0.0:  khi = nz - 1
 
+       #print "%d %d %d %d %d %d\n" % (ilo,jlo,klo,ihi,jhi,khi);
+
 
        dx = ifloat - float(ilo);
        dy = jfloat - float(jlo);
@@ -140,15 +144,21 @@ class Vgrid:
        #  return nan 
        if ((ihi<nx) and (jhi<ny) and (khi<nz) and (ilo>=0) and (jlo>=0) and (klo>=0)) :
 
+         #print  "map  %d\n" % self.ijk2u((ihi,jhi,khi));
+         #print  "data %f\n" % self.data[self.ijk2u((ihi,jhi,khi))];
+         #print  "data %f\n" % self.data[self.ijk2u((5,9,2))]        
 
-         u =      dx *     dy *     dx *self.data[self.ijk2u((ihi,jhi,khi))] \
-           +      dx *(1.0-dy)*     dx *self.data[self.ijk2u((ihi,jlo,khi))] \
-           +      dx *     dy *(1.0-dx)*self.data[self.ijk2u((ihi,jhi,klo))] \
-           +      dx *(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ihi,jlo,klo))] \
-           + (1.0-dx)*     dy *     dx *self.data[self.ijk2u((ilo,jhi,khi))] \
-           + (1.0-dx)*(1.0-dy)*     dx *self.data[self.ijk2u((ilo,jlo,khi))] \
-           + (1.0-dx)*     dy *(1.0-dx)*self.data[self.ijk2u((ilo,jhi,klo))] \
-           + (1.0-dx)*(1.0-dy)*(1.0-dx)*self.data[self.ijk2u((ilo,jlo,klo))]
+
+
+
+         u =      dx *     dy *     dz *self.data[self.ijk2u((ihi,jhi,khi))] \
+           +      dx *(1.0-dy)*     dz *self.data[self.ijk2u((ihi,jlo,khi))] \
+           +      dx *     dy *(1.0-dz)*self.data[self.ijk2u((ihi,jhi,klo))] \
+           +      dx *(1.0-dy)*(1.0-dz)*self.data[self.ijk2u((ihi,jlo,klo))] \
+           + (1.0-dx)*     dy *     dz *self.data[self.ijk2u((ilo,jhi,khi))] \
+           + (1.0-dx)*(1.0-dy)*     dz *self.data[self.ijk2u((ilo,jlo,khi))] \
+           + (1.0-dx)*     dy *(1.0-dz)*self.data[self.ijk2u((ilo,jhi,klo))] \
+           + (1.0-dx)*(1.0-dy)*(1.0-dz)*self.data[self.ijk2u((ilo,jlo,klo))]
 
        else:
          return np.nan
