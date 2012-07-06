@@ -1,0 +1,5 @@
+To Run
+source ../../config.bash 
+python ../../smol.py  -root sphere
+
+
