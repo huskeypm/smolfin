@@ -71,7 +71,7 @@ def interpolate_dx(apbsfilename,coordinates,mvalues=-1):
       #print coordinates[i,:]
       #print i 
       (x,y,z) = (coordinates[i,0],coordinates[i,1],coordinates[i,2])
-      print "%f %f %f" % (x,y,z)
+      #print "%f %f %f" % (x,y,z)
       #mvalues.append(vgrid.value((x,y,z)))
       mvalues[i] = vgrid.value((x,y,z))
 
@@ -173,22 +173,28 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
     return mvalues
 
 def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
+
+    # CHeck on offset parameter 
     if(np.linalg.norm(mgridloc) > 0):
       print "Need to reimplement mgridloc"
       quit()
 
 
-    print "WARNING: there is still something funkly going on with the interpolation. This needs to be fixed!"
     # Need to make simple (small number of vertices) dx file and coordinate, then compare smol version versus my version, value by value 
     # It's possible that there's something about the dx reader that I don't understand or am not using correctly, 
     # so maybe even need to very that the coordinates are the same between both dx files when read in  
     
     mcoordinates = mesh.coordinates()
-    print "DEBUG - replace me"
-    print np.shape(mcoordinates)
-    print mcoordinates[0,:]
-    mcoordinates = np.array([[-6.1909236908e+00,    1.2481193542e+01,   -5.8969097137e+00]])
-    print np.shape(mcoordinates)
+
+
+    # debug 
+    if(0):
+    #print "DEBUG - replace me"
+    #print np.shape(mcoordinates)
+    #print mcoordinates[0,:]
+      mcoordinates = np.array([[-6.1909236908e+00,    1.2481193542e+01,   -5.8969097137e+00]])
+    #print np.shape(mcoordinates)
+
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     coverage= np.zeros( len(mcoordinates[:,0]) ) 
     prevRes =9999;
@@ -220,9 +226,7 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
       #plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png",range=range)
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
 
-    print "debugging"
     print values
-    quit()
 
    # plot coverage
     plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
