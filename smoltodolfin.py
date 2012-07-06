@@ -62,15 +62,16 @@ def interpolate_dx(apbsfilename,coordinates,mvalues=-1):
     vgrid.readOpenDX(file)
     file.close()
 
-    nEle = np.shape(coordinates)[0]
+    nEle = np.shape(coordinates[:,0])[0]
     if(mvalues==-1):
-      mvalues = np.zeros((nEle,3))
+      mvalues = np.zeros(nEle)
 
     ## do interpolation 
     for i in range(nEle):
       #print coordinates[i,:]
       #print i 
       (x,y,z) = (coordinates[i,0],coordinates[i,1],coordinates[i,2])
+      print "%f %f %f" % (x,y,z)
       #mvalues.append(vgrid.value((x,y,z)))
       mvalues[i] = vgrid.value((x,y,z))
 
@@ -181,9 +182,13 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
     # Need to make simple (small number of vertices) dx file and coordinate, then compare smol version versus my version, value by value 
     # It's possible that there's something about the dx reader that I don't understand or am not using correctly, 
     # so maybe even need to very that the coordinates are the same between both dx files when read in  
-    quit()
     
     mcoordinates = mesh.coordinates()
+    print "DEBUG - replace me"
+    print np.shape(mcoordinates)
+    print mcoordinates[0,:]
+    mcoordinates = np.array([[-6.1909236908e+00,    1.2481193542e+01,   -5.8969097137e+00]])
+    print np.shape(mcoordinates)
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     coverage= np.zeros( len(mcoordinates[:,0]) ) 
     prevRes =9999;
@@ -212,8 +217,12 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
       i+=1
       coverage[goodidx] = i * 1.0    
 
-      plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png",range=range)
+      #plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png",range=range)
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
+
+    print "debugging"
+    print values
+    quit()
 
    # plot coverage
     plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
@@ -362,7 +371,6 @@ if __name__ == "__main__":
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
         mcsffilename = sys.argv[i+1]
-        problem.mesh= read_and_mark(mcsffilename)
 
       if(sys.argv[i] == '-mesh'):
         meshfilename = sys.argv[i+1]
@@ -382,6 +390,13 @@ if __name__ == "__main__":
       if(sys.argv[i] == '-mgridloc'):
         spl = sys.argv[i+1].split(' ')
         mgridloc=[ float(spl[0]), float(spl[1]), float(spl[2]) ]
+
+      
+    if(len(apbsfilenames)==0 and csvfilename=='none'):
+        raise RuntimeError("Must provide apbs electrostatic potential files. Otherwise use mcsftodolfin.py")
+
+    if(mcsffilename!="none"):
+        problem.mesh= read_and_mark(mcsffilename)
 
 
     ## report 

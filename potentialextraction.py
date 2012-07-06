@@ -105,6 +105,9 @@ class Vgrid:
        xmax = xmin+ float(nx-1)*hx
        ymax = ymin+ float(ny-1)*hy
        zmax = zmin+ float(nz-1)*hz
+       print "SDFS"
+       print pt
+       quit()
 
 
        ifloat = (pt[0] - xmin)/hx
