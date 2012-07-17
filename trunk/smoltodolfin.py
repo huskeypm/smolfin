@@ -97,7 +97,7 @@ def interpolate_dx(apbsfilename,coordinates,mvalues=-1):
 # mgridloc - describes where center of molecule is in the FE grid. Useful when the molecule is not centered
 # debugValues - replaces potential with scalar to test interpolation 
 # 
-def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
+def InterpolateAPBSdx(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
     from scipy.interpolate import griddata
 
     ## cleaning up input data 
@@ -172,28 +172,20 @@ def interpAPBS(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,0,0]):
 
     return mvalues
 
-def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
+def InterpolateAPBSdxs(mesh,apbsfilenames,mgridloc=-1):
 
     # CHeck on offset parameter 
-    if(np.linalg.norm(mgridloc) > 0):
+    if(np.size(mgridloc) != 1):
       print "Need to reimplement mgridloc"
       quit()
 
 
-    # Need to make simple (small number of vertices) dx file and coordinate, then compare smol version versus my version, value by value 
-    # It's possible that there's something about the dx reader that I don't understand or am not using correctly, 
-    # so maybe even need to very that the coordinates are the same between both dx files when read in  
-    
+    # load in coordinates 
     mcoordinates = mesh.coordinates()
-
 
     # debug 
     if(0):
-    #print "DEBUG - replace me"
-    #print np.shape(mcoordinates)
-    #print mcoordinates[0,:]
       mcoordinates = np.array([[-6.1909236908e+00,    1.2481193542e+01,   -5.8969097137e+00]])
-    #print np.shape(mcoordinates)
 
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     coverage= np.zeros( len(mcoordinates[:,0]) ) 
@@ -226,7 +218,7 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
       #plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png",range=range)
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
 
-    print values
+    #print values
 
    # plot coverage
     plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
@@ -236,7 +228,7 @@ def InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=-1):
 
 
 # use for interpolating form FD apbs files 
-def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=-1):
+def InterpolateAPBSdxs_SCIPY(apbsfilenames,mgridloc=-1):
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
     prevRes =9999;
 
@@ -264,7 +256,7 @@ def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=-1):
   
       # interpolate apbs values onto mcoordinates grid
       #if(skipAPBS!=1):
-      nvalues = interpAPBS(mesh,apbs,usesubset=1,mvalues=mvalues,mgridloc=mgridloc)#,debugValues=res)    
+      nvalues = InterpolateAPBSdx(mesh,apbs,usesubset=1,mvalues=mvalues,mgridloc=mgridloc)#,debugValues=res)    
       mvalues = nvalues
       #print "%d->%d" % (len(zidx),len(zidxn))
     
@@ -279,7 +271,7 @@ def InterpolateAPBSFiles_SCIPY(apbsfilenames,mgridloc=-1):
 
       return mvalues 
 
-def readapbscsv(mesh,csvfilename):
+def InterpolateAPBScsv(mesh,csvfilename):
     #print "WARNING: this does not attempt to check that your vertices match between apbs and .m!!!!!"
     print "WARNING: expects spaces"
     lines = open(csvfilename).readlines()
@@ -310,7 +302,7 @@ def readapbscsv(mesh,csvfilename):
     return mvalues
 
 # csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
-def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none"):
+def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none",writePotentialOnly=writePotentialOnly):
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
@@ -318,13 +310,17 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none
     mcoordinates = mesh.coordinates()
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
 
+    #print apbsfilenames
+    #print mgridloc
+    #quit()
 
     # hack
     if(csvfilename!="none"): 
-      mvalues = readapbscsv(mesh,csvfilename)
+      mvalues = InterpolateAPBScsv(mesh,csvfilename)
     
+    # correct way 
     else:
-      mvalues = InterpolateAPBSFiles(mesh,apbsfilenames,mgridloc=mgridloc)
+      mvalues = InterpolateAPBSdxs(mesh,apbsfilenames,mgridloc=mgridloc)
 
 
     # check that i can still create a mesh/ something weird was happening in 
@@ -354,7 +350,7 @@ def do_read_write(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none
 
 
     # save
-    write_smol_files(mcsffilename.replace(".m", ""), mesh, values,writePotentialOnly=writePotentialOnly) #,markedvertices,mmarkers)
+    write_smol_files(problem.root, mesh, values,writePotentialOnly=writePotentialOnly) #,markedvertices,mmarkers)
 
 
 if __name__ == "__main__":
@@ -375,12 +371,13 @@ if __name__ == "__main__":
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
         mcsffilename = sys.argv[i+1]
+        problem.root = mcsffilename.replace(".m", ""), 
 
       if(sys.argv[i] == '-mesh'):
         meshfilename = sys.argv[i+1]
-        mcsffilename = meshfilename.replace("_mesh.xml.gz",".m")
-        print "Mostly for debugging at this point since not fully implemented"
+        #mcsffilename = meshfilename.replace("_mesh.xml.gz",".m")
         from dolfin import Mesh
+        problem.root = mcsffilename.replace("_mesh.xml.gz", ""), 
         problem.mesh = Mesh(meshfilename)
         writePotentialOnly=1
 
@@ -406,12 +403,13 @@ if __name__ == "__main__":
     ## report 
     #print "mcsfilename:"
     #print mcsffilename
+    print "Root name ", problem.root
     print "potentials:"
     print apbsfilenames
     print "grid loc (optional)"
     print mgridloc
 
 
-    do_read_write(problem,apbsfilenames,mgridloc=mgridloc,csvfilename=csvfilename)
-    #do_read_write(mcsffilename,apbsfilename,skipAPBS=1)
+    convertAllAPBS(problem,apbsfilenames,mgridloc=mgridloc,csvfilename=csvfilename,writePotentialOnly=writePotentialOnly)
+    #convertAllAPBS(mcsffilename,apbsfilename,skipAPBS=1)
 
