@@ -162,8 +162,14 @@ def ProblemDefinition(problem,boundaries=0):
     psi = Function(V)
     psi.vector()[:] = 0.0
 
+  # DEBUG 
+  z = Function(V)
+  z.vector()[:] = psi.vector()[:]
+  File("psi.pvd") << z
+  #print "DEBUGGING PSI"
+  #quit()
 
-  ## assign init cond??????
+
 
   ## assign BC 
   bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
@@ -251,6 +257,12 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     # u_1 = params.bulk_conc * exp(-beta * pmf)
     # u_1.assign(u) # following pg 50 of Logg 
 
+    # DEBUG
+    z = Function(V)
+    z.vector()[:] = intfact_np[:]
+    File("intfact.pvd") << z
+    z.vector()[:]  =problem.pmf.vector()[:]
+    File("pmf.pvd") << z
     
 
     # Project the solution
@@ -337,6 +349,7 @@ def Debug():
   problem.bcs = bcs
   problem.V   = V
 
+
   # solve PDE
   results = SolveSteadyState(problem) # h,psi,bcs,V)
   
@@ -377,7 +390,9 @@ def SimpleTest():
 
 
 if __name__ == "__main__":
-  msg="smol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>"
+  msg="""
+\nsmol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>
+"""
 
 
 

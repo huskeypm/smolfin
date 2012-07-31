@@ -1,5 +1,6 @@
 #
 # Revisions
+# 120727 Major bug fixed with interpolating potential values 
 # 120312 Removing Nans in interpolated mesh 
 #
 import numpy
@@ -20,12 +21,29 @@ def write_smol_files(filename, mesh,u,writePotentialOnly=0): # , u,vertexmarkers
 
     # for dolfin
     if(writePotentialOnly==0):
-      File(filename+"_mesh.xml.gz") << mesh
+      fileMesh = filename+"_mesh.xml.gz"
+      File(fileMesh) << mesh
 
-    File(filename+"_values.xml.gz") << u
+    filePotential = filename+"_values.xml.gz"
+    File(filePotential) << u
     # for viewing in paraview 
     pot = u
     File(filename+"_values.pvd") << pot
+
+
+    # Test written file 
+    # PKH 120731
+    #print "WARNING: there is some imprecision I think in how interplation is done in dolfin"
+    #print "If I load mesh, then I get different inpolation results then If i use the current"
+    #print "DEBUG"
+    #mesh = Mesh(fileMesh)
+    # THIS WORKS 
+    #V = FunctionSpace(mesh, "CG", 1)
+    #psi = Function(V,filePotential);
+    #z = Function(V)
+    #z.vector()[:] = psi.vector()[:]
+    #File("psimcsf.pvd") << z
+    #File("psimcsf_orig.pvd") << z
 
 def ClipValues(pot, THRESH=999):
     idx = (np.where(pot < -THRESH))[0]
@@ -302,11 +320,24 @@ def InterpolateAPBScsv(mesh,csvfilename):
     return mvalues
 
 # csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
-def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="none",writePotentialOnly=writePotentialOnly):
+def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
+    csvfilename="none",writePotentialOnly=writePotentialOnly):
+
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
     #mesh= read_and_mark(mcsffilename,nomark=1)
     mesh = problem.mesh
+
+    # bug hack - I think there is a discrepency in how interpolations are done
+    # for orig. mesh. Here I will save the current mesh, then reload to ensure
+    # the coords are the same
+    # PKH 120731
+    print "NOTE: Need to save mesh, then load 'interpolated', otherwise potential will disagree"
+    fileMesh = "temp_mesh.xml.gz"
+    File(fileMesh) << mesh
+    mesh = Mesh(fileMesh)
+
+
     mcoordinates = mesh.coordinates()
     mvalues = np.zeros( len(mcoordinates[:,0]) ) 
 
@@ -334,7 +365,8 @@ def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,csvfilename="non
 
     # Constrain potential to give values no higher than 55M (next to protein in stern layer) 
     # 55 = 1 exp(- q E /kT)
-    maxPotent = np.log(55) * (1/parms.beta) / parms.valence
+    # PKH 120731
+    maxPotent = np.log(55.) * (1/parms.beta) / parms.valence
     ClipValues(mvalues,THRESH=maxPotent)
  
      
@@ -371,13 +403,13 @@ if __name__ == "__main__":
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
         mcsffilename = sys.argv[i+1]
-        problem.root = mcsffilename.replace(".m", ""), 
+        problem.root = mcsffilename.replace(".m", "")
 
       if(sys.argv[i] == '-mesh'):
         meshfilename = sys.argv[i+1]
         #mcsffilename = meshfilename.replace("_mesh.xml.gz",".m")
         from dolfin import Mesh
-        problem.root = mcsffilename.replace("_mesh.xml.gz", ""), 
+        problem.root = mcsffilename.replace("_mesh.xml.gz", "")
         problem.mesh = Mesh(meshfilename)
         writePotentialOnly=1
 
@@ -410,6 +442,7 @@ if __name__ == "__main__":
     print mgridloc
 
 
-    convertAllAPBS(problem,apbsfilenames,mgridloc=mgridloc,csvfilename=csvfilename,writePotentialOnly=writePotentialOnly)
+    convertAllAPBS(problem,apbsfilenames,mgridloc=mgridloc,\
+      csvfilename=csvfilename,writePotentialOnly=writePotentialOnly)
     #convertAllAPBS(mcsffilename,apbsfilename,skipAPBS=1)
 
