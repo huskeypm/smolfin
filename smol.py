@@ -19,6 +19,13 @@ class problem:
 parms  = params()
 problem = problem()
 results = empty()
+
+# misc
+def CheckAreas(mesh):
+    for m in np.array([1,4,5]):
+      areaExpr = Constant(1.)*ds(m) 
+      area = assemble(areaExpr, mesh=mesh)
+      print "Marker %d area: %f " % (m,area) 
  
 ## PDE terms
 
@@ -93,13 +100,14 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     if(useSolutionVector==0):
       solutionVector=results.up
    
-    # SOLVED: # ERROR: ufl.log.UFLException: Shape mismatch.
-    #Vv = VectorFunctionSpace(problem.mesh,"CG",1) # need Vector, not scalar function space 
-
+    print "VERIFY, but I believe I needed D* on both terms"
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
-    Jp = parms.D * grad(solutionVector) + parms.beta * solutionVector * grad(problem.pmf)
+    Jp = parms.D * grad(solutionVector) + parms.D *  parms.beta * solutionVector * grad(problem.pmf)
 
+    print  assemble(Constant(1)*ds(subdomainMarker),
+                                mesh=problem.mesh,
+                                exterior_facet_domains = problem.subdomains)
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker),
                                 exterior_facet_domains = problem.subdomains)
     kon = boundary_flux_terms / float(parms.bulk_conc);
@@ -147,6 +155,9 @@ def ProblemDefinition(problem,boundaries=0):
     raise RuntimeError(msg)
   else:
     subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
+
+    # quick check
+    CheckAreas(mesh)
 
   # Load and apply electrostatic potential values to mesh 
   V = FunctionSpace(mesh, "CG", 1)

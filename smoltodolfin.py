@@ -195,6 +195,7 @@ def InterpolateAPBSdxs(mesh,apbsfilenames,mgridloc=-1):
     # CHeck on offset parameter 
     if(np.size(mgridloc) != 1):
       print "Need to reimplement mgridloc"
+      print mgridloc
       quit()
 
 
@@ -395,6 +396,7 @@ if __name__ == "__main__":
     mcsffilename = "none"
     csvfilename = "none"
     mgridloc=[0,0,0] # location of molecular center within finite element mesh 
+    mgridloc=-1      # location of molecular center within finite element mesh 
 
     import sys
     if len(sys.argv) <  3:

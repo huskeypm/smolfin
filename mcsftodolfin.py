@@ -1,7 +1,10 @@
 # Pete Kekenes-Huskey
+# Code is specific to molecular meshes, so will toss warnings if it sees
+# someinth 'unmolecular'
 
 #
 # Revisions
+# 120730 adjusted handling of markers to work with current version of dolfin 
 # 120312 added function to check mesh dimensions to verify agreement with APBS 
 #
 
@@ -11,6 +14,14 @@ from params import * # must do this for class
 #parms = params()
 import smol
 parms = smol.parms
+
+# Apparently there are differences now in how dolfin does the subdomain markings. 
+# dolfinos="vm" should be compatible with current version of dolfin
+# dolfinos="rocce" sohuld be compataible wit the slightly out of date dolfin 
+#dolfinos = "rocce"
+dolfinos = "vm"
+dolfinos = "rocce"
+testMesh =0 
 
 
 class empty:pass
@@ -46,19 +57,76 @@ def check_facets(mesh, cellmarkers):
 def mark_neumann_facets(mesh, cellmarkers):
     #from dolfin import cells, facets,mesh
     from dolfin import cells, facets, MeshFunction, File
-    md = mesh.domains()
-    facet_markers = md.markers(2)
-    
-    # 2 for top dim 2 (facets)
-    for j, cell in enumerate(cells(mesh)):
-       for i, face in enumerate(facets(cell)):
-           marker = int(cellmarkers[j,i])
-           facet_markers.set_value(cell.index(), i, marker)
 
-    print "WARNING: this is no longer working on virtual machine"
-    subdomains = MeshFunction("uint", mesh, facet_markers)
-    print "Num faces at active_site_marker:", \
-          (subdomains.array()==parms.active_site_marker).sum()
+
+    # new code 
+    # Tryng to et mesh labeling to wor with new version of dolfin 
+    if(dolfinos != "rocce"):
+      from dolfin import Cell
+      mesh.init()
+      md = mesh.domains()
+      facet_markers = md.markers(2)
+      i=0
+      for facet in facets(mesh):
+      #for i,facet in enumerate(facets(mesh)):
+         #print facet
+         #print "facet ",i
+         i+=1
+         if not facet.exterior():
+             cell_ind = facet.entities(3)[0]
+             #print "cell_ind %d" %(cell_ind)
+             local_facet = (Cell(mesh,\
+               cell_ind).entities(2)==\
+               facet.index()).nonzero()[0][0]
+			
+	     # define marker value and facet
+             # johan (WAS) 
+             #facet_markers.set_value(cell_ind, local_facet, 1)
+             # me 
+             # DOESNT WORK marker = int(cellmarkers[cell_ind,local_facet])
+             # WARNING: I'm not sure which facet ID I'm supposed to be using, so I just chose one
+             marker = int(max(cellmarkers[cell_ind,:]))
+             #print cell_ind,local_facet, marker,cellmarkers[cell_ind,:]
+
+             #facet_markers.set_value(cell.index(), i, marker)
+             facet_markers.set_value(cell_ind, local_facet, marker)
+             #facet_markers.set_value(cell_ind, local_facet, 8)       
+             #if(marker!=0):
+             #if(1):
+             #  print cell_ind,marker
+
+      domains = md.facet_domains(mesh)
+      #print domains.array()
+      domains.array()[domains.array()==domains.array().max()] = 0
+      ar = domains.array()
+      #print ar
+      #print np.sum(ar)
+      subdomains = domains 
+      
+    # old code 
+    # This used to run, but no longer does, except for rocce. I've left this 
+    # here for reverse compatbility 
+    else:
+      #WASsubdomains = MeshFunction("uint", mesh, facet_markers)
+      md = mesh.domains()
+      facet_markers = md.markers(2)
+      
+      # 2 for top dim 2 (facets)
+      for j, cell in enumerate(cells(mesh)):
+         for i, face in enumerate(facets(cell)):
+             marker = int(cellmarkers[j,i])
+             facet_markers.set_value(cell.index(), i, marker)
+             #if(marker==1):
+             #  print marker
+  
+      subdomains  = md.mesh_function(mesh,facet_markers)
+
+    #print subdomains.array().sum()
+    print "Active %d " % parms.active_site_marker
+    print "Num faces at active_site_marker (%d): %d" %(\
+          int(parms.active_site_marker),
+          (subdomains.array()[:]==parms.active_site_marker).sum()\
+          )
 
     File("subdomains.pvd") << subdomains
 
@@ -221,21 +289,30 @@ def write_dolfin_files(filename, mesh):
     from dolfin import File,MeshFunction
 
     print "Filename:", filename
-    #print "mesh:", mesh.num_vertices(), mesh.num_cells()
     File(filename+"_mesh.xml.gz") << mesh
-    #File(filename+"_cellmarkers.xml.gz") << u
-    #File(filename+"_vertmarkers.xml.gz") << uv
 
     # write subdomains
-    #sub_domains = MeshFunction("uint", mesh, mesh.topology().dim() - 1)
-    sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
-    File(filename+"_subdomains.xml.gz") << sub_domains
-
-    # write cell marker file 
-    from dolfin import CellFunction
-    cells = CellFunction("uint", mesh)
-    cells.set_all(1) # not sure if this is right 
-    File(filename+"_cells.xml.gz") << cells       
+    # new version of dolfin 
+    if(dolfinos != "rocce"):
+      md = mesh.domains()
+      facet_markers = md.markers(2)
+      sub_domains = md.facet_domains(mesh)
+      File(filename+"_subdomains.xml.gz") << sub_domains         
+  
+      from dolfin import CellFunction
+      cells = CellFunction("uint", mesh)
+      cells.set_all(1) # not sure if this is right 
+      File(filename+"_cells.xml.gz") << cells       
+    # old version of dolfin 
+    else:
+      sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
+      File(filename+"_subdomains.xml.gz") << sub_domains
+  
+      # write cell marker file 
+      from dolfin import CellFunction
+      cells = CellFunction("uint", mesh)
+      cells.set_all(1) # not sure if this is right 
+      File(filename+"_cells.xml.gz") << cells       
 
 # gives basic gemetric information for the marked boundaries 
 def meshgeoms(mesh,idx=":"):
@@ -289,8 +366,11 @@ def do_checks(mesh,subdomains):
 
     actidx = np.where(marked0.vector()[:] > 0)
     if(len(actidx[0]) < 1):
-      print "No active site!!"
-    act = meshgeoms(mesh,actidx) 
+        print "WARNING: No active site!"
+        noAct=1
+        #raise RuntimeError("No active site!")
+    else:
+      act = meshgeoms(mesh,actidx) 
 
     # check if range contains (0,0,0) which indicates we pass through origin
     # I check for this by noting that the min must be < 0, and max > 0, therefore
@@ -309,9 +389,10 @@ def do_checks(mesh,subdomains):
     print "Compare this with original molecule. If incorrect, rescale mesh using XXX and repeat conversion"
 
     # active site 
-    print "Active site center and dims"
-    print act.mid
-    print act.dim
+    if(noAct==0):
+      print "Active site center and dims"
+      print act.mid
+      print act.dim
 
     
 
@@ -340,7 +421,7 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0,writeMeshOnly=0):
       print "WARNING: only returning mesh for debugfgin purposes"
       return(mesh)
 
-    print "Need to verify meshing is correct again.."
+    #print "Need to verify meshing is correct again.."
 
     # generate neumann/dirichlet here
     subdomains = mark_neumann_facets(mesh, cellmarkers)
@@ -374,10 +455,9 @@ def read_and_mark(filename, nomark=0,rescaleCoor=0,writeMeshOnly=0):
       quit()
 
     # Test
-    test =1 
     V = FunctionSpace(mesh, "CG", 1)
     from view import PrintBoundary
-    if(test==1):
+    if(testMesh==1):
       # surface w no marker
       bc0 = DirichletBC(V, Constant(1), subdomains,parms.unmarked_marker )
       PrintBoundary(mesh, bc0,file="unmarked")
@@ -417,7 +497,9 @@ if __name__ == "__main__":
     filename = r"xxxx/x.m"
     import sys
     if len(sys.argv) < 2:
-        raise RuntimeError("expected an mcsf file as second argument (or optional rescale value as third arg)")
+        msg ="""
+expected an mcsf file as second argument (or optional rescale value as third arg"""
+        raise RuntimeError(msg)
     filename = sys.argv[1]
     rescaleCoor=0
     writeMeshOnly=0
