@@ -2,6 +2,7 @@
 from dolfin import Constant
 
 
+
 class params:
   def __init__(self):
     # CONVERTSION
@@ -44,4 +45,11 @@ class params:
     #self.valence = 1.0
     #self.valence = -1.0
     #self.valence = 0.0
+
+    ## report 
+    import socket
+    import dolfin
+    self.hostname=socket.gethostname()
+    self.dolfinver = dolfin.__version__
+    print "Running on %s using dolfin version %s" % (self.hostname,self.dolfinver)     
 
