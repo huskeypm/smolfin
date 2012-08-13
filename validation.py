@@ -178,7 +178,7 @@ def ValidationChargedSphere(problem,root,useStored=1):
   r_Ang = parms.um_to_Ang * R
   kon_elec = 4 * np.pi * D * qEff * (np.exp(qEff/r_Ang)/(np.exp(qEff/r_Ang)-1)) * c
   kon_pred = chargedresult.kon*60. # 60 [s/min]
-  print "VERIFY kon_anal %e pred %e [1/M min]" % (kon_elec, kon_pred)
+  print "VERIFY kon_anal_elec %e pred %e [1/M min]" % (kon_elec, kon_pred)
 
   return chargedresult
 
@@ -187,6 +187,7 @@ def ValidationChargedSphere(problem,root,useStored=1):
 def ValidationSphere(useStored=0):
   # params 
   root = "/home/huskeypm/scratch/validation/sphere/sphere"
+  root = "./sphere"
   problem.fileMesh = root+"_mesh.xml.gz"
   problem.fileSubdomains= root+"_subdomains.xml.gz"
 
@@ -204,9 +205,19 @@ def ValidationSphere(useStored=0):
 
   
   # results 
+  # Made this to resemble Song paper. NOTE: they use an 8 A sphere and 2 A ion, thus
+  # giving an effective radius of 10 A. To reproduce their expression, uncomment #SONG below
+  # NOTE: they solve their problem on a finite domain, whereas I assume an infinite domain,
+  # hence their solution is not exactly kon=4piRD 
   R = parms.Rsphere
-  kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_M
-  print "kon_anal %e pred %e " % (kon_analy, unchargedresult.kon)
+  #R = 10 * parms.Ang_to_um  
+  #parms.D = 780
+
+  #kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_invM
+  # for conceptual reasons I redefine kon in terms of surface area
+  kon_analy = (4 * np.pi * R**2)/R * parms.D * parms.um3_to_invM
+  print "kon_anal %e [1/Ms] %e [1/Mmin] pred %e [1/Ms]" % (kon_analy, kon_analy*60,\
+     unchargedresult.kon)
 
   chargedresult = ValidationChargedSphere(problem,root,useStored=useStored) 
   
@@ -237,7 +248,18 @@ def ValidationSphere(useStored=0):
   return msg
 
 if __name__ == "__main__":
-  msg="smol.py run "
+  msg="""
+\nPurpose:
+  Run validation
+
+Usage:\n"""
+  msg+= __file__+" dbg/sphere/run "
+  msg+="""
+
+Notes:
+
+"""
+
 
 
 
@@ -249,6 +271,9 @@ if __name__ == "__main__":
     ValidateGatedChannel(4.)
     ValidateLinearPotential(4.)
     #ValidationTnC(useStored=1)
+  elif(sys.argv[1]=="sphere"):
+    m1 = ValidationSphere(useStored=0)
+    
   elif(sys.argv[1]=="run"):
     m1 = ValidationSphere(useStored=0)
     m2 = serca.Validation(useStored=0)

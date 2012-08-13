@@ -24,7 +24,7 @@ def computeChannelTerm(problem,expnBV):
   #print expnBV
   invkPMF = problem.L/(problem.D*problem.sigma*expnBV)
   kPMF = 1/invkPMF
-  kPMF = kPMF * parms.um3_to_M
+  kPMF = kPMF * parms.um3_to_invM
   return kPMF
 
 # estimate Veff using 3.17

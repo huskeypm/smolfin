@@ -20,21 +20,26 @@ parms  = params()
 problem = problem()
 results = empty()
 
-# misc
+# Areas are given in Angstroms squared, if mesh prepared by gamer from molecular structure
 def CheckAreas(mesh):
     for m in np.array([1,4,5]):
       areaExpr = Constant(1.)*ds(m) 
       area = assemble(areaExpr, mesh=mesh)
-      print "Marker %d area: %f " % (m,area) 
+      print "Marker %d area: %f [A^2]" % (m,area) 
  
 ## PDE terms
 
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-def ElectrostaticPMF(problem,psi,q="useparams"):
+# V = can define alternative vector function space here instead of using one in 'problem'
+def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
 
-    problem.pmf = Function(problem.V)
+    if(V=="none"):
+      problem.pmf = Function(problem.V)
+    else:
+      problem.pmf = Function(V)
+
     pmf = np.zeros( psi.vector().size() ) 
 
     if(q=="useparams"):
@@ -67,26 +72,7 @@ def ElectrostaticPMF(problem,psi,q="useparams"):
     
     problem.pmf.vector()[:] = pmf
 
-   
-
-# This works
-def Test():
-
-    mesh = UnitCube(32,32,32)
-
-    # Function space
-    V = FunctionSpace(mesh, "CG", 1)
-
-    # The potential
-    psi = Function(V)
-    psi.vector()[:] = 1.0 # WRONG WRONG WRONG 
-
-    Vv = VectorFunctionSpace(mesh,"CG",1) # need Vector, not scalar function space 
-    # Need to know the spatial dimension to compute the shape of derivatives.
-    Jp = project(D*grad(psi),Vv)
- 
-
-
+    return pmf # needed for homog.py 
 
 ## get kon
 # See eqn (4) of Notes
@@ -105,17 +91,24 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
     Jp = parms.D * grad(solutionVector) + parms.D *  parms.beta * solutionVector * grad(problem.pmf)
 
-    print  assemble(Constant(1)*ds(subdomainMarker),
-                                mesh=problem.mesh,
-                                exterior_facet_domains = problem.subdomains)
+    # Boundary flux [Ang um^2/s], since mesh is in A 
+    # see notetaker 2012-08-13
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker),
                                 exterior_facet_domains = problem.subdomains)
+    # use -1, since I believe normals are printed INTO domain
+    boundary_flux_terms *= -1 
+    #print boundary_flux_terms, "[A um^2 /s]"
+    boundary_flux_terms *= parms.Ang_to_um      
+    #print boundary_flux_terms, "[um^3 /s]"
+    boundary_flux_terms *= parms.um3_to_invM     
+    #print boundary_flux_terms, "[um^3 /s]"
+    
     kon = boundary_flux_terms / float(parms.bulk_conc);
 
     #print "Warning: using correction until i get units right. "
     #print "Based on smol for sphere w/o charge. "
     #print "Is something wrong w scaling by bulk conc?"
-    kon = kon * parms.correction
+    #kon = kon * parms.correction
     print "kon: %e [1/Ms] %e [1/M min]" % (kon, kon*60)
 
     results.kon = kon

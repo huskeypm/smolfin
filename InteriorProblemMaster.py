@@ -63,7 +63,7 @@ def Run(problem,InteriorObject=0):
   #print interProb.x
   #print "Interior integral %e " % integral
 
-  kpmf = 1/integral * parms.um3_to_M
+  kpmf = 1/integral * parms.um3_to_invM
   #print "rescaling into units of Ms %e" % kpmf 
   results.invkPMF= 1/kpmf     
 
