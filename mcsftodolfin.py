@@ -15,13 +15,11 @@ from params import * # must do this for class
 import smol
 parms = smol.parms
 
-# Apparently there are differences now in how dolfin does the subdomain markings. 
-# dolfinos="vm" should be compatible with current version of dolfin
-# dolfinos="rocce" sohuld be compataible wit the slightly out of date dolfin 
-#dolfinos = "rocce"
-dolfinos = "vm"
-dolfinos = "rocce"
+
+
 testMesh =0 
+
+
 
 
 class empty:pass
@@ -52,7 +50,9 @@ def check_facets(mesh, cellmarkers):
              unmarked= unmarked+1
              facet_markers.set_value(cell.index(), i, parms.molecular_boundary_marker)
 
-    print "Found %d unmarked facets. NOT DOING ANYTHING RIGHT NOW" % unmarked
+    if(unmarked > 0):
+      msg = "Found %d unmarked facets. NOT DOING ANYTHING RIGHT NOW" % unmarked
+      raise RuntimeError(msg)
 
 def mark_neumann_facets(mesh, cellmarkers):
     #from dolfin import cells, facets,mesh
@@ -61,52 +61,33 @@ def mark_neumann_facets(mesh, cellmarkers):
 
     # new code 
     # Tryng to et mesh labeling to wor with new version of dolfin 
-    if(dolfinos != "rocce"):
+    if(parms.dolfinver=="1.0.0"):
       from dolfin import Cell
       mesh.init()
       md = mesh.domains()
       facet_markers = md.markers(2)
-      i=0
       for facet in facets(mesh):
-      #for i,facet in enumerate(facets(mesh)):
-         #print facet
-         #print "facet ",i
-         i+=1
-         if not facet.exterior():
+         if facet.exterior():
              cell_ind = facet.entities(3)[0]
              #print "cell_ind %d" %(cell_ind)
              local_facet = (Cell(mesh,\
                cell_ind).entities(2)==\
                facet.index()).nonzero()[0][0]
 			
-	     # define marker value and facet
-             # johan (WAS) 
-             #facet_markers.set_value(cell_ind, local_facet, 1)
-             # me 
-             # DOESNT WORK marker = int(cellmarkers[cell_ind,local_facet])
-             # WARNING: I'm not sure which facet ID I'm supposed to be using, so I just chose one
              marker = int(max(cellmarkers[cell_ind,:]))
-             #print cell_ind,local_facet, marker,cellmarkers[cell_ind,:]
 
-             #facet_markers.set_value(cell.index(), i, marker)
              facet_markers.set_value(cell_ind, local_facet, marker)
-             #facet_markers.set_value(cell_ind, local_facet, 8)       
-             #if(marker!=0):
-             #if(1):
-             #  print cell_ind,marker
 
       domains = md.facet_domains(mesh)
       #print domains.array()
       domains.array()[domains.array()==domains.array().max()] = 0
       ar = domains.array()
-      #print ar
-      #print np.sum(ar)
       subdomains = domains 
       
     # old code 
     # This used to run, but no longer does, except for rocce. I've left this 
     # here for reverse compatbility 
-    else:
+    elif(parms.dolfinver=="1.0.0+"):
       #WASsubdomains = MeshFunction("uint", mesh, facet_markers)
       md = mesh.domains()
       facet_markers = md.markers(2)
@@ -120,6 +101,10 @@ def mark_neumann_facets(mesh, cellmarkers):
              #  print marker
   
       subdomains  = md.mesh_function(mesh,facet_markers)
+
+    else:
+      msg = "Dolfin version %s unknown " % parms.dolfinver
+      raise RuntimeError(msg)
 
     #print subdomains.array().sum()
     print "Active %d " % parms.active_site_marker
@@ -293,7 +278,7 @@ def write_dolfin_files(filename, mesh):
 
     # write subdomains
     # new version of dolfin 
-    if(dolfinos != "rocce"):
+    if(parms.dolfinver=="1.0.0"):
       md = mesh.domains()
       facet_markers = md.markers(2)
       sub_domains = md.facet_domains(mesh)
@@ -304,7 +289,7 @@ def write_dolfin_files(filename, mesh):
       cells.set_all(1) # not sure if this is right 
       File(filename+"_cells.xml.gz") << cells       
     # old version of dolfin 
-    else:
+    elif(parms.dolfinver=="1.0.0+"):
       sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
       File(filename+"_subdomains.xml.gz") << sub_domains
   
@@ -313,6 +298,7 @@ def write_dolfin_files(filename, mesh):
       cells = CellFunction("uint", mesh)
       cells.set_all(1) # not sure if this is right 
       File(filename+"_cells.xml.gz") << cells       
+
 
 # gives basic gemetric information for the marked boundaries 
 def meshgeoms(mesh,idx=":"):
@@ -365,6 +351,7 @@ def do_checks(mesh,subdomains):
     mol = meshgeoms(mesh,idx=molidx)
 
     actidx = np.where(marked0.vector()[:] > 0)
+    noAct = 0 
     if(len(actidx[0]) < 1):
         print "WARNING: No active site!"
         noAct=1
@@ -498,7 +485,15 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
         msg ="""
-expected an mcsf file as second argument (or optional rescale value as third arg"""
+Purpose:
+  Convert .m mesh to dolfin xml format
+
+Usage:
+  .py file.mcsf
+
+
+
+"""
         raise RuntimeError(msg)
     filename = sys.argv[1]
     rescaleCoor=0
