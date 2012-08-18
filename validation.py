@@ -187,7 +187,7 @@ def ValidationChargedSphere(problem,root,useStored=1):
 def ValidationSphere(useStored=0):
   # params 
   root = "/home/huskeypm/scratch/validation/sphere/sphere"
-  root = "./sphere"
+  #root = "./sphere"
   problem.fileMesh = root+"_mesh.xml.gz"
   problem.fileSubdomains= root+"_subdomains.xml.gz"
 

@@ -13,6 +13,7 @@ import numpy as np
 from params import * # must do this for class
 #parms = params()
 import smol
+import re
 parms = smol.parms
 
 
@@ -61,7 +62,8 @@ def mark_neumann_facets(mesh, cellmarkers):
 
     # new code 
     # Tryng to et mesh labeling to wor with new version of dolfin 
-    if(parms.dolfinver=="1.0.0"):
+    if(re.search('1.0.0',parms.dolfinver) is not None):
+
       from dolfin import Cell
       mesh.init()
       md = mesh.domains()
@@ -87,7 +89,7 @@ def mark_neumann_facets(mesh, cellmarkers):
     # old code 
     # This used to run, but no longer does, except for rocce. I've left this 
     # here for reverse compatbility 
-    elif(parms.dolfinver=="1.0.0+"):
+    elif(0): #parms.dolfinver=="1.0.0+"):
       #WASsubdomains = MeshFunction("uint", mesh, facet_markers)
       md = mesh.domains()
       facet_markers = md.markers(2)
@@ -278,7 +280,8 @@ def write_dolfin_files(filename, mesh):
 
     # write subdomains
     # new version of dolfin 
-    if(parms.dolfinver=="1.0.0"):
+    #if(parms.dolfinver=="1.0.0"):
+    if(re.search('1.0.0',parms.dolfinver) is not None):
       md = mesh.domains()
       facet_markers = md.markers(2)
       sub_domains = md.facet_domains(mesh)
@@ -289,7 +292,7 @@ def write_dolfin_files(filename, mesh):
       cells.set_all(1) # not sure if this is right 
       File(filename+"_cells.xml.gz") << cells       
     # old version of dolfin 
-    elif(parms.dolfinver=="1.0.0+"):
+    elif(0): #parms.dolfinver=="1.0.0+"):
       sub_domains = MeshFunction("uint", mesh, mesh.domains().markers(2))
       File(filename+"_subdomains.xml.gz") << sub_domains
   
@@ -491,6 +494,9 @@ Purpose:
 Usage:
   .py file.mcsf
 
+     -rescaleCoor
+     -writeMeshOnly
+
 
 
 """
@@ -505,12 +511,13 @@ Usage:
       if(arg=="-writeMeshOnly"):
         writeMeshOnly=1
       if(arg=="-rescaleCoor"):
-        rescaleCoor = sys.argv[i+1]
+        rescaleCoor = float(sys.argv[i+1])
+        #print "Rescaling coordinates by factor of %f"  % ( rescaleCoor)
 
-    if(len(sys.argv)==3):
-      mesh = read_and_mark(filename,rescaleCoor=rescaleCoor,writeMeshOnly=writeMeshOnly)
-    else:
-      mesh = read_and_mark(filename)
+    #if(len(sys.argv)==3):
+    mesh = read_and_mark(filename,rescaleCoor=rescaleCoor,writeMeshOnly=writeMeshOnly)
+    #else:
+    #  mesh = read_and_mark(filename)
     
 #mcsffile = "p.pqr.output.all.m"
 #coordinates,cells, markers = read_mcsf(mcsffile)

@@ -35,7 +35,7 @@ def CheckAreas(mesh):
 # V = can define alternative vector function space here instead of using one in 'problem'
 def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
 
-    if(V=="none"):
+    if(type(V) is str and V=="none"):
       problem.pmf = Function(problem.V)
     else:
       problem.pmf = Function(V)
@@ -133,24 +133,46 @@ def InterfaceFunction(x,on_boundary):
 # interface via interiorProblem  
 import sys
 import os.path
-def ProblemDefinition(problem,boundaries=0):
-  ## load data
-  # coordinates
+
+def LoadFiles(problem):
   if(os.path.exists(problem.fileMesh)==0):
     msg = "fileMesh %s does not exist" % problem.fileMesh
     raise RuntimeError(msg)
   else:
-    mesh = Mesh(problem.fileMesh);
+    problem.mesh = Mesh(problem.fileMesh);
 
   # load subdomains 
   if(os.path.exists(problem.fileSubdomains)==0):
     msg = "fileSubdomains %s does not exist" % problem.fileSubdomains
     raise RuntimeError(msg)
   else:
-    subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
+    problem.subdomains = MeshFunction("uint", problem.mesh, problem.fileSubdomains)
 
-    # quick check
-    CheckAreas(mesh)
+
+def ProblemDefinition(problem,boundaries=0):
+  ## load data
+  # coordinates
+#  if(os.path.exists(problem.fileMesh)==0):
+#    msg = "fileMesh %s does not exist" % problem.fileMesh
+#    raise RuntimeError(msg)
+#  else:
+#    mesh = Mesh(problem.fileMesh);
+#
+#  # load subdomains 
+#  if(os.path.exists(problem.fileSubdomains)==0):
+#    msg = "fileSubdomains %s does not exist" % problem.fileSubdomains
+#    raise RuntimeError(msg)
+#  else:
+#    subdomains = MeshFunction("uint", mesh, problem.fileSubdomains) 
+
+
+  LoadFiles(problem)
+  mesh = problem.mesh
+  subdomains = problem.subdomains
+   
+
+  # quick check
+  CheckAreas(mesh)
 
   # Load and apply electrostatic potential values to mesh 
   V = FunctionSpace(mesh, "CG", 1)
