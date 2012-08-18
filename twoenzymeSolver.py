@@ -2,13 +2,19 @@ import sys
 from dolfin import *
 from dolfin import nabla_grad as grad 
 import smol
+import view
+import numpy as np
 
 
+markerUnmarked=0
 markerSubstrateEnzyme=1
 markerProductEnzyme=4
 markerOuter=5
 concAbsorb= Constant(0.0)
 concBulk = Constant(1.0) 
+
+# use average area on boundary for dirichlet condition 
+useAverageArea=0
 
 class empty:pass
 
@@ -27,32 +33,26 @@ def DirichletProduct(problem):
   V = problem.V
   mesh = problem.mesh
   subdomains = problem.subdomains
-  cS_ProductEnzymeSurface = assemble(
-    problem.cS*ds(markerProductEnzyme),exterior_facet_domains=subdomains)
 
-  print "ERROR: Area calls are not working. Using fake value"
-  area= assemble(
-    Constant(1)*ds,exterior_facet_domains=subdomains,mesh=mesh)
-    #Constant(1)*ds(markerProductEnzyme),exterior_facet_domains=subdomains,mesh=mesh)
-  area = 300
-  cS_ProductEnzymeSurface /= area
-  print "cS_ProductEnzymeSurface %f " % cS_ProductEnzymeSurface
-  print "area %f" % area
-  
-  print "Implementation NOT correct. Placeholder for now"
-  # TODO: Instead of a BC that has a single value along the entire 
+  if(useAverageArea==1):
+    cS_ProductEnzymeSurface = assemble(
+      problem.cS*ds(markerProductEnzyme),exterior_facet_domains=subdomains)
+    area= assemble(
+      Constant(1)*ds(markerProductEnzyme),exterior_facet_domains=subdomains,mesh=mesh)
+    cS_ProductEnzymeSurface /= area
+#    print "cS_ProductEnzymeSurface %f " % cS_ProductEnzymeSurface
+#    print "area %f" % area
+    bc1 = DirichletBC(V,1-cS_ProductEnzymeSurface,subdomains,markerProductEnzyme)
+
+  # Instead of a BC that has a single value along the entire 
   # boundary, I need to apply the BC based on the local concentration at 
   # each point along the boundary, e.g.
-  # uSProdEnz = uS( at product enzyme ) 
-  # uPProdEnz =  1 - uSProdEnz
-  # A = assemble('Function',mesh)
-  # A[ where(x == product enzyme ) ] = uPProdEnz
-  # assign BC
+  else:
+    vcS = Function(problem.V)
+    len = (np.shape(problem.cS.vector()[:]))[0]
+    vcS.vector()[:] = np.ones(len) -  problem.cS.vector()[:]
+    bc1 = DirichletBC(V,vcS,subdomains,markerProductEnzyme)
 
-  
-  print "WARNING: Not supposed to be using an average here"
-  bc1 = DirichletBC(V,1-cS_ProductEnzymeSurface,subdomains,markerProductEnzyme)
-  #PKH120816bc1 = DirichletBC(V,1-problem.cS,subdomains,markerProductEnzyme)
   bc2 = DirichletBC(V,Constant(0.),subdomains,markerOuter)
   #Neumann: dcdn = 0 for markerSubstrateEnzyme
   bc = [bc1,bc2]
@@ -69,21 +69,18 @@ def DirichletIntermediate(problem):
       problem.cP*ds(markerSubstrateEnzyme),exterior_facet_domains=subdomains)
     area= assemble(
       Constant(1.)*ds(markerSubstrateEnzyme),exterior_facet_domains=subdomains)
-    #print "Using fake value for area"
-    #area = 300
     cP_SubstrateEnzymeSurface /= area
-    print "cP_SubstrateEnzymeSurface %f " % cP_SubstrateEnzymeSurface
+    #print "cP_SubstrateEnzymeSurface %f " % cP_SubstrateEnzymeSurface
     bc1 = DirichletBC(V,1-cP_SubstrateEnzymeSurface,subdomains,markerSubstrateEnzyme)
 
   # use exact values along surface as dirichlet
   else:
-    print "Using exact values"
-    #bc1 = DirichletBC(V,1.-problem.cP.vector()[:],subdomains,markerSubstrateEnzyme)
-    bc1 = DirichletBC(V,problem.cP,subdomains,markerSubstrateEnzyme)
-
+    vcP = Function(problem.V)
+    len = (np.shape(problem.cP.vector()[:]))[0]
+    vcP.vector()[:] = np.ones(len) -  problem.cP.vector()[:]
+    bc1 = DirichletBC(V,vcP,subdomains,markerSubstrateEnzyme)
 
   # assign BC
-  # PKH120816 
   bc2 = DirichletBC(V,Constant(0.),subdomains,markerOuter)
   bc3 = DirichletBC(V,concAbsorb,subdomains,markerProductEnzyme)
   bc = [bc1,bc2,bc3]
