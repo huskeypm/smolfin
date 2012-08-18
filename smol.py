@@ -259,9 +259,12 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
       F = inner(grad(u),grad(v))*dx
       L = 0
     else:
-      F = inner(grad(u),grad(v))*dx(1)
+      form = inner(grad(u),grad(v))*dx(1)
       beta = Constant(0.)
-      L = inner(beta,v)*ds  # (1)
+      form += inner(beta,v)*ds
+
+      F = lhs(form)
+      L = rhs(form) 
 
 
     # apply Neumann cond 

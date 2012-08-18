@@ -165,18 +165,29 @@ def solveProb(problem):
 
 def doit(problem):
   smol.LoadFiles(problem)
+
+  #V = FunctionSpace(problem.mesh,"CG",1)
+  #bc1 = DirichletBC(V, Constant(1), problem.subdomains,markerSubstrateEnzyme)
+  #view.PrintBoundary(problem.mesh,bc1,file="domain1")
+  #bc2 = DirichletBC(V, Constant(1), problem.subdomains,markerProductEnzyme)
+  #view.PrintBoundary(problem.mesh,bc2,file="domain2")
+  #bcO = DirichletBC(V, Constant(1), problem.subdomains,markerOuter)
+  #view.PrintBoundary(problem.mesh,bcO,file="sphereO")
+  #quit()
+
   solveProb(problem)
 
 
 
 if __name__ == "__main__":
-  msg="Purpose: Two simulate time-dep, reaction diff equation for the S->I->P reaction"
-  msg=msg+"Usage: "
-  msg=msg+"twoenzyme.py _mesh.xml _subdomains.xml"
-  msg=msg+"Notes:"
-  remap = "none"
+  msg="""
+\nPurpose: 
+  To simulate time-dep, reaction diff equation for the S->I->P reaction
 
+Usage:
+  .py _mesh.xml _subdomains.xml
 
+"""
 
   import sys
   if len(sys.argv) < 2:
@@ -186,7 +197,7 @@ if __name__ == "__main__":
   problem.fileMesh = sys.argv[1]
   problem.fileSubdomains = sys.argv[2]
   if(len(sys.argv)==3):
-    print "arg"
+    1
 
 
 
