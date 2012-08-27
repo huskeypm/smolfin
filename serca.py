@@ -25,9 +25,8 @@ problem = smol.problem
 class empty:pass
 boundaries = empty()
 
-def Setup():
+def Setup(root):
     # smol 
-    root = "/home/huskeypm/scratch/validation/serca/serca"
     problem.fileMesh = root+"_mesh.xml.gz"
     problem.fileSubdomains= root+"_subdomains.xml.gz"
     problem.filePotential= root+"_values.xml.gz"
@@ -44,7 +43,7 @@ def Setup():
     # gating 
     problem.wa=0.67e9 # rate of forming absorbing state [1/s] 
     problem.wr=3.23e9 # rate of forming reflective state [1/s]
-    problem.p_a=0.67e9 / 3.23e9; # probabilityy of being in absorbing state (?far from protein) 
+    problem.p_a=0.67e9 / (problem.wa+problem.wr); # probabilityy of being in absorbing state (?far from protein) 
     problem.Va = -1.74 # Potential felt near open state ([kcal/mol]
     problem.Vr = 0 # DEFINE [kcal/mol]
     print "Assuming Vr = %f" % problem.Vr
@@ -59,8 +58,8 @@ def Setup():
     # IN SERCABOUNDARY sercaboundaries.topZ = 0.0
 
      
-    boundaries.activeSite = sercaboundaries.ActiveSite()
-    boundaries.bulkBoundary = sercaboundaries.BulkBoundary()
+    #boundaries.activeSite = sercaboundaries.ActiveSite()
+    #boundaries.bulkBoundary = sercaboundaries.BulkBoundary()
     #molecularBoundary = bound.MolecularBoundary() # i think we can ignore, since zero anyway
 
     return root
@@ -74,8 +73,8 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useStored=0):
     else:
       results = 0
 
-    channelresults = channel.Run(problem,boundaries=boundaries,pvdFileName=pvdFileName,results=results)
-    #channelresults = channel.Run(problem,pvdFileName=pvdFileName ,results=results)
+    #channelresults = channel.Run(problem,boundaries=boundaries,pvdFileName=pvdFileName,results=results)
+    channelresults = channel.Run(problem,pvdFileName=pvdFileName ,results=results)
     print "WARNING: need to pass channel info to gating (right now using computeChannelTerm"
     gatingresults = gating.Run(problem,result=channelresults)
     
@@ -83,38 +82,43 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useStored=0):
 
 # validation example for SERCA 
 def Validation(useStored=0):
-    root = Setup()
 
     ## wo electro 
     #smol.Run(problem, boundaries=boundaries)
+    root = "/home/huskeypm/scratch/validation/serca/serca" 
+    Setup(root)
     problem.filePotential= "none"
     #unchargedresults = Run(problem,boundaries=boundaries,pvdFileName="serca_uncharged.pvd")
-    unchargedresult = Run(problem,pvdFileName=root+"_uncharged.pvd",useStored=useStored)
+    unchargedresult = Run(problem,pvdFileName=root+"serca_uncharged.pvd",useStored=useStored)
+    #unchargedresult = Run(problem,pvdFileName=root+"_uncharged.pvd",useStored=useStored)
 
     ## w electro 
     problem.filePotential= root+"_values.xml.gz"
     #print "Skipping electro for now"
     #problem.filePotential="none"
-    chargedresult = Run(problem,boundaries=boundaries,pvdFileName=root+"_charged.pvd",useStored=useStored)
+    #chargedresult = Run(problem,boundaries=boundaries,pvdFileName=root+"_charged.pvd",useStored=useStored)
+    chargedresult = Run(problem,pvdFileName=root+"_charged.pvd",useStored=useStored)
     #chargedresult = Run(problem,pvdFileName="serca_charged.pvd",useStored=useStored)
 
     ## with uncharged lipids
-    unchgRoot  = "/home/huskeypm/scratch/validation/serca_no_lipid_chg/serca_no_lipid_chg"
+    unchgRoot  = "/home/huskeypm/scratch/validation/serca_no_lipid_chg_120827/serca_no_lipid_chg"
+    Setup(unchgRoot)
     problem.filePotential= unchgRoot+"_values.xml.gz"
-    nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName=unchgRoot+".pvd",useStored=useStored)
+    #nolipidchargedresult = Run(problem,boundaries=boundaries,pvdFileName=unchgRoot+".pvd",useStored=useStored)
+    nolipidchargedresult = Run(problem,pvdFileName=unchgRoot+".pvd",useStored=useStored)
 
     msg=[]
 
     scale = 1.e9
-    m = "SERCA(%1e) & %7.5f & %7.5f  & %7.5f & %7.5f & %7.5f \\\\" % (
+    m = "SERCA(%1e) & %7.5f & %7.5f  & %7.5f & %s & %7.5f \\\\" % (
       scale,
       unchargedresult.kon/scale,
       chargedresult.kon/scale,
       chargedresult.kss/scale,
-      chargedresult.k_g/scale,
+      chargedresult.k_g,
       nolipidchargedresult.kon/scale)
     msg.append(m)
-    m = "SERCA & %3.1e & %3.1e & %3.1e & %3.1e & %3.1e \\\\" % (
+    m = "SERCA & %3.1e & %3.1e & %3.1e & %s & %3.1e \\\\" % (
       unchargedresult.kon,
       chargedresult.kon,
       chargedresult.kss,
@@ -135,5 +139,7 @@ if __name__ == "__main__":
 
   elif(sys.argv[1]=="run"):
     Validation(useStored=0)
+  elif(sys.argv[1]=="dbg"):
+    Validation(useStored=1)
 
 

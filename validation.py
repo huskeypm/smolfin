@@ -172,13 +172,14 @@ def ValidationChargedSphere(problem,root,useStored=1):
   # from (18) of Song 
   #parms.D = 780 # 7.8 e4 A^2/us --> [um/s]
   #R = 8e-4 # 8 A --> 8e-4 um
+   # I don't like this description, Check Schulten notes
   c= 4207955.8011049731 # value need to match Song paper for D=780, R= 8 A, z*z = 1 TODO
   Q_debye = 7; # [A] See notes from 120405 I think, where Debye shows Q = 7 A for monovalent ions 
   qEff = Q_debye * q
   r_Ang = parms.um_to_Ang * R
   kon_elec = 4 * np.pi * D * qEff * (np.exp(qEff/r_Ang)/(np.exp(qEff/r_Ang)-1)) * c
   kon_pred = chargedresult.kon*60. # 60 [s/min]
-  print "VERIFY kon_anal_elec %e pred %e [1/M min]" % (kon_elec, kon_pred)
+  print "kon_anal_elec %e pred %e [1/M min]" % (kon_elec, kon_pred)
 
   return chargedresult
 
@@ -186,7 +187,8 @@ def ValidationChargedSphere(problem,root,useStored=1):
 # all validation cases (Fig 1s)
 def ValidationSphere(useStored=0):
   # params 
-  root = "/home/huskeypm/scratch/validation/sphere/sphere"
+  root = "/home/huskeypm/scratch/validation/sphere_120824a/sphere"
+  #root = "/home/huskeypm/scratch/validation/sphere/sphere"
   #root = "./sphere"
   problem.fileMesh = root+"_mesh.xml.gz"
   problem.fileSubdomains= root+"_subdomains.xml.gz"
@@ -219,8 +221,10 @@ def ValidationSphere(useStored=0):
   print "kon_anal %e [1/Ms] %e [1/Mmin] pred %e [1/Ms]" % (kon_analy, kon_analy*60,\
      unchargedresult.kon)
 
+  ## Charged case
   chargedresult = ValidationChargedSphere(problem,root,useStored=useStored) 
-  
+  #print "%e %e\n" % (unchargedresult.kon,chargedresult.kon)
+   
 
   ## linear potential 
   k_lp = ValidateLinearPotential(chargedresult.kon)
@@ -234,15 +238,15 @@ def ValidationSphere(useStored=0):
   i =0 # where V0 = -5 
   scale = 1.0e9 # normalization in figures 
   msg = []
-  m = "Sphere(%1e) & %7.5f & %7.5f &  %7.5f & %7.5f & NA \\\\" % (
+  m = "Sphere(%1e) & %7.5f & %7.5f &  %7.5f & %e & NA \\\\" % (
     scale,
     unchargedresult.kon/scale,
     chargedresult.kon/scale,
     k_lp[i]/scale,
-    k_gs[i]/scale) 
+    k_gs[i]) 
 
   msg.append(m) 
-  m = "Sphere & %3.1e & %3.1e &  %3.1e & %3.1e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]/1) 
+  m = "Sphere & %3.1e & %3.1e &  %3.1e & %e & NA \\\\" % (unchargedresult.kon/1,chargedresult.kon/1,k_lp[i]/1,k_gs[i]) 
   msg.append(m) 
  
   return msg
@@ -276,9 +280,8 @@ Notes:
     
   elif(sys.argv[1]=="run"):
     m1 = ValidationSphere(useStored=0)
-    m2 = serca.Validation(useStored=0)
-    m3 = troponin.Validation(useStored=0)
-    print "WARNING: charged values for sphere printing twice instead of unchagrged"
+    #m2 = serca.Validation(useStored=0)
+    #m3 = troponin.Validation(useStored=0)
     for i in m1:
       print i 
     for i in m2:

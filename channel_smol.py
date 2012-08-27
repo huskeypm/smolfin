@@ -30,6 +30,7 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0):
 
     if(exteriorResult.kon < 1):
       print "WARNING: Kon caclc failed"
+      quit()
       exteriorResult.kon =1 
 
   else:
@@ -38,17 +39,17 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0):
 
   # defined in 4.1 Berez 
   invkE = 1/exteriorResult.kon
-  #print "kE  %f" % exteriorResult.kon
-
+  #print "kE  %e" % exteriorResult.kon
 
   ## kon 
   # Berez 4.1, assuming that Kappa0 >> s(0) e(-beta V(0))
   invkss = invkE + invKappa0 + interiorResult.invkPMF
+  #print "kPMF %e" % (1/interiorResult.invkPMF)
   
   # technical should be copied to a new object (TODO)
   interiorResult.kon = exteriorResult.kon
   interiorResult.kss = 1/invkss
-  print "kss %f" % interiorResult.kss
+  print "kss %e" % interiorResult.kss
   print "xL %f " % interiorResult.xL
    
   return interiorResult 

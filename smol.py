@@ -18,7 +18,6 @@ class problem:
 
 parms  = params()
 problem = problem()
-results = empty()
 
 # Areas are given in Angstroms squared, if mesh prepared by gamer from molecular structure
 def CheckAreas(mesh):
@@ -222,6 +221,9 @@ def ProblemDefinition(problem,boundaries=0):
 
 def SolveSteadyState(problem,pvdFileName="up.pvd",\
       q="useparams",twoEnzymeVer=0): 
+
+    # always make new container for results
+    results = empty()
 
     V = problem.V
   
