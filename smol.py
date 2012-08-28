@@ -85,7 +85,6 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     if(useSolutionVector==0):
       solutionVector=results.up
    
-    print "VERIFY, but I believe I needed D* on both terms"
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
     Jp = parms.D * grad(solutionVector) + parms.D *  parms.beta * solutionVector * grad(problem.pmf)
@@ -310,6 +309,8 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     results.up = up
 
     # debug
+    # NOTE: Be sure to adjust color scaling in paraview. Sometimes it normalize
+    # to 0-1, thought the data range says otherwise  
     print "Projected solution range: %f - %f " %  (min(up.vector()),max(up.vector()))
 
     ## print solution

@@ -44,9 +44,9 @@ def Setup(root):
     problem.wa=0.67e9 # rate of forming absorbing state [1/s] 
     problem.wr=3.23e9 # rate of forming reflective state [1/s]
     problem.p_a=0.67e9 / (problem.wa+problem.wr); # probabilityy of being in absorbing state (?far from protein) 
-    problem.Va = -1.74 # Potential felt near open state ([kcal/mol]
-    problem.Vr = 0 # DEFINE [kcal/mol]
-    print "Assuming Vr = %f" % problem.Vr
+    #problem.Va = -0.65 # Potential felt near open state ([kcal/mol]
+    #problem.Vr = 0 # DEFINE [kcal/mol]
+    #print "Assuming Vr = %f" % problem.Vr
 
 
     # borrow values from testboundaries
@@ -67,7 +67,7 @@ def Setup(root):
 
 def Run(problem,boundaries=0,pvdFileName="up.pvd",useStored=0):
     if (useStored==1):
-      print "In debugging mode so skipping computation of smol. WARNING: results are wrong anyway!"
+      print "In debugging mode so skipping computation of smol and using hardcoded values" 
       results = empty()
       results.kon = 1e9 # for debugging 
     else:
@@ -75,8 +75,7 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useStored=0):
 
     #channelresults = channel.Run(problem,boundaries=boundaries,pvdFileName=pvdFileName,results=results)
     channelresults = channel.Run(problem,pvdFileName=pvdFileName ,results=results)
-    print "WARNING: need to pass channel info to gating (right now using computeChannelTerm"
-    gatingresults = gating.Run(problem,result=channelresults)
+    gatingresults = gating.Run(problem,results=channelresults)
     
     return gatingresults 
 
@@ -110,6 +109,7 @@ def Validation(useStored=0):
     msg=[]
 
     scale = 1.e9
+    print "WARNING: k_g is NOT scaled by %e" % scale
     m = "SERCA(%1e) & %7.5f & %7.5f  & %7.5f & %s & %7.5f \\\\" % (
       scale,
       unchargedresult.kon/scale,
@@ -126,6 +126,7 @@ def Validation(useStored=0):
       nolipidchargedresult.kon)
     msg.append(m)
 
+    print msg
     return msg
 
 

@@ -22,7 +22,7 @@ boundaries = empty()
 
 def TnCIsolated(problem,useStored=0):
     if (useStored==1):
-      print "In debugging mode so skipping computation of smol. WARNING: results are wrong anyway!"
+      print "In debugging mode so skipping computation of smol and using hardcoded values" 
       results = empty()
       results.kon = 2.2e10 # for debugging 
     else:
@@ -59,7 +59,7 @@ def TnCIsolated(problem,useStored=0):
 
 def TnCTroponin(problem,boundaries=0,useStored=0):
     if (useStored==1):
-      print "In debugging mode so skipping computation of smol. WARNING: results are wrong anyway!"
+      print "In debugging mode so skipping computation of smol and using hardcoded values" 
       results = empty()
       results.kon = 1 # for debugging 
       return results

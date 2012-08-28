@@ -37,6 +37,8 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0):
     print "Stored result used instead of copmpuyting smol"
     exteriorResult = results
 
+  print "kPMF %e" % interiorResult.kPMF
+
   # defined in 4.1 Berez 
   invkE = 1/exteriorResult.kon
   #print "kE  %e" % exteriorResult.kon
@@ -44,7 +46,6 @@ def Run(problem,boundaries=0,pvdFileName="up.pvd",useDefault=1,results=0):
   ## kon 
   # Berez 4.1, assuming that Kappa0 >> s(0) e(-beta V(0))
   invkss = invkE + invKappa0 + interiorResult.invkPMF
-  #print "kPMF %e" % (1/interiorResult.invkPMF)
   
   # technical should be copied to a new object (TODO)
   interiorResult.kon = exteriorResult.kon

@@ -280,8 +280,8 @@ Notes:
     
   elif(sys.argv[1]=="run"):
     m1 = ValidationSphere(useStored=0)
-    #m2 = serca.Validation(useStored=0)
-    #m3 = troponin.Validation(useStored=0)
+    m2 = serca.Validation(useStored=0)
+    m3 = troponin.Validation(useStored=0)
     for i in m1:
       print i 
     for i in m2:
