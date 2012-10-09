@@ -92,6 +92,7 @@ def plotslice(problem,result,title="no title",fileName="slice.png",show=0):
 def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,range=50):
     import numpy as np
     #meshcoor = problem.mesh.coordinates()
+    femDim = np.shape(meshcoor)[1]
     
     # assuming molecule is within 50 of middle of grid 
     # want 500 points in each dir (resolution)
@@ -101,7 +102,11 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,
     (grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(numpt*1j),-range:range:(numpt*1j)]
     from scipy.interpolate import griddata
     #slice = griddata(meshcoor, result.up.vector(), (grid_x, grid_y,grid_z),method="linear")
-    slice = griddata(meshcoor, vals, (grid_x, grid_y,grid_z),method="linear")
+    if(femDim==3):
+      slice = griddata(meshcoor, vals, (grid_x, grid_y,grid_z),method="linear")
+    elif(femDim==2):
+      slice = griddata(meshcoor, vals, (grid_x, grid_y),method="linear")
+
     slice[np.isnan(slice)]=0
     x1 = np.linspace(-range,range,numpt)
     x2 = np.linspace(-range,range,numpt)

@@ -80,18 +80,26 @@ def interpolate_dx(apbsfilename,coordinates,mvalues=-1):
     vgrid.readOpenDX(file)
     file.close()
 
+    # get mesh dimensions 
+    femDim = np.shape(coordinates)[1]
+
     nEle = np.shape(coordinates[:,0])[0]
     if(mvalues==-1):
       mvalues = np.zeros(nEle)
 
     ## do interpolation 
-    for i in range(nEle):
-      #print coordinates[i,:]
-      #print i 
-      (x,y,z) = (coordinates[i,0],coordinates[i,1],coordinates[i,2])
-      #print "%f %f %f" % (x,y,z)
-      #mvalues.append(vgrid.value((x,y,z)))
-      mvalues[i] = vgrid.value((x,y,z))
+    if(femDim==3):
+      for i in range(nEle):
+        (x,y,z) = (coordinates[i,0],coordinates[i,1],coordinates[i,2])
+        #mvalues.append(vgrid.value((x,y,z)))
+        mvalues[i] = vgrid.value((x,y,z))
+    elif(femDim==2):
+      for i in range(nEle):
+        (x,y,z) = (coordinates[i,0],coordinates[i,1],0)
+        mvalues[i] = vgrid.value((x,y,z))
+    else: 
+      raise RuntimeError("Unknown dimension")
+
 
     ### cleaning up bad pixes 
     #bad = np.where(np.isnan(mvalues))
