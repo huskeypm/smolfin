@@ -6,7 +6,7 @@ import view
 import numpy as np
 
 
-markerUnmarked=0
+markerUnmarked=8
 markerSubstrateEnzyme=1
 markerProductEnzyme=4
 markerOuter=5
@@ -44,6 +44,8 @@ def DirichletProduct(problem):
 #    print "area %f" % area
     bc1 = DirichletBC(V,1-cS_ProductEnzymeSurface,subdomains,markerProductEnzyme)
 
+    # testing 
+
   # Instead of a BC that has a single value along the entire 
   # boundary, I need to apply the BC based on the local concentration at 
   # each point along the boundary, e.g.
@@ -52,6 +54,11 @@ def DirichletProduct(problem):
     len = (np.shape(problem.cS.vector()[:]))[0]
     vcS.vector()[:] = np.ones(len) -  problem.cS.vector()[:]
     bc1 = DirichletBC(V,vcS,subdomains,markerProductEnzyme)
+
+
+    # Test dirichlet
+    view.PrintBoundary(problem.mesh,bc1,file="testdir")
+
 
   bc2 = DirichletBC(V,Constant(0.),subdomains,markerOuter)
   #Neumann: dcdn = 0 for markerSubstrateEnzyme
@@ -149,7 +156,7 @@ def solveProb(problem):
   results = empty()
   kout = smol.ComputeKon(problem,results,
     useSolutionVector=1,solutionVector = problem.cS,subdomainMarker=markerSubstrateEnzyme)
-  print "kout P : %e " % kout
+  print "kout S : %e " % kout
 
   kout = smol.ComputeKon(problem,results,
     useSolutionVector=1,solutionVector=problem.cI,subdomainMarker=markerProductEnzyme)
@@ -157,7 +164,7 @@ def solveProb(problem):
 
   kout = -1 * smol.ComputeKon(problem,results,
     useSolutionVector=1,solutionVector=problem.cP,subdomainMarker=markerProductEnzyme)
-  print "kout S : %e " % kout
+  print "kout P : %e " % kout
 
   problem.kout = kout
   

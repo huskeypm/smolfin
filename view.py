@@ -23,7 +23,7 @@ def PrintSubdomains(mesh,subdomains,file="subdomains"):
   
 
 
-def PrintBoundary(mesh, boundaries,file="marked"):
+def PrintBoundary(mesh, boundaries,file="marked",dbg=0):
   from dolfin import FunctionSpace, Function, File, plot
   V = FunctionSpace(mesh, "CG", 1)
  
@@ -40,8 +40,12 @@ def PrintBoundary(mesh, boundaries,file="marked"):
     marked1 = Function(V)
     boundary.apply(marked1.vector())
     tot = np.size(marked1.vector().array())
-    n = np.size(np.where(marked1.vector() >0)) # assuming 0 is unmarked
+    whereIdx = np.where(marked1.vector() >0)
+    n = np.size(whereIdx) # assuming 0 is unmarked
     print "Marked %d/%d " % (n,tot)
+    if(dbg!=0):
+      print mesh.coordinates()[whereIdx,:]
+  
     marked.vector()[:] +=marked1.vector()[:]
 
   #plot(marked, interactive=1)
@@ -51,6 +55,8 @@ def PrintBoundary(mesh, boundaries,file="marked"):
 
   print "Printing %s for viewing" % file
   File(file) << marked
+
+  return (n) 
 
 # create figures in style of jounrla formats 
 def JournalFig(scale=4): # this is the scaleup needed for DPI
