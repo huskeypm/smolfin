@@ -91,7 +91,8 @@ def markBoundaries(problem):
 
   ## define boundaries 
   from dolfin import MeshFunction
-  subdomains = MeshFunction("uint", mesh, 2)
+  #OLDsubdomains = MeshFunction("uint", mesh, 2)
+  subdomains = FacetFunction("uint", mesh, 0)
   problem.subdomains = subdomains 
 
   # mark everything with default
@@ -119,6 +120,9 @@ def markBoundaries(problem):
   outsideBoundary.radius = problem.sphereOuter.radius
   #print outsideBoundary.radius
   outsideBoundary.mark(subdomains,tes.markerOuter)
+
+  # test
+  File("subdoms.pvd") << subdomains
 
   ## mark boundaries 
   test = 1 
