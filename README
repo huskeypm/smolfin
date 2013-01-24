@@ -1,9 +1,16 @@
 
-Smolfin is a tool for estimating diffusion-limited reactions between a substrate and enzyme, based on the Smoluchowski electrodiffusion equation. The software utilizes atomistic resolution structural data for the enzyme, the electrostatic potential from Poisson-Boltzmann solvers like APBS (http://www.poissonboltzmann.org/apbs), and is based on the FEnICs finite element solver (http://fenicsproject.org/). Smolfin was recently used to model Ca2+ association with the myofilament Ca2+ sensor Troponin C and the Sarcoplasmic Reticulum Ca2+ ATPase Ca2+ transporter [1]  
+Smolfin is a tool for estimating diffusion-limited reactions between a 
+substrate and enzyme, based on the Smoluchowski electrodiffusion equation. 
+The software utilizes atomistic resolution structural data for the enzyme, 
+the electrostatic potential from Poisson-Boltzmann solvers like APBS 
+(http://www.poissonboltzmann.org/apbs), and is based on the FEnICs finite 
+element solver (http://fenicsproject.org/). Smolfin was recently used to model 
+Ca2+ association with the myofilament Ca2+ sensor Troponin C and the 
+Sarcoplasmic Reticulum Ca2+ ATPase Ca2+ transporter [1]  
 
-Tutorial details are forthcoming.
+Tutorial details are located in ./docs/
 
 
-[1]	P. M. Kekenes-Huskey, A. Gillette, and J. Hake, Finite-element estimation of protein-ligand association rates with post-encounter effects: applications to calcium binding in troponin C and SERCA,Computational Science & Discovery, 2012.
+P. M. Kekenes-Huskey, A. Gillette, and J. Hake, Finite-element estimation of protein-ligand association rates with post-encounter effects: applications to calcium binding in troponin C and SERCA,Computational Science & Discovery, 2012.
 http://iopscience.iop.org/1749-4699/5/1/014015?fromSearchPage=true
 
