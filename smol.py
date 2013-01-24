@@ -89,6 +89,12 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
     Jp = parms.D * grad(solutionVector) + parms.D *  parms.beta * solutionVector * grad(problem.pmf)
 
+    # Compute area for comparison 
+    subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker),
+                                mesh=problem.mesh,
+                                exterior_facet_domains = problem.subdomains)
+    print "Subdomain has area of %f [A^2]" % subdomainArea
+
     # Boundary flux [Ang um^2/s], since mesh is in A 
     # see notetaker 2012-08-13
     boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker),
@@ -236,12 +242,7 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
       problem.pmf.vector()[:] = 0.
 
     # The solution function
-    if(twoEnzymeVer==0):
-      u = Function(V)
-    else:
-      print "WARNING: havent the slightest why I can't use same call"
-      u = TrialFunction(V)
-
+    u = TrialFunction(V)
     # Test function
     v = TestFunction(V)
 
@@ -257,15 +258,15 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     #  (no time dependence,so only consider del u del v term)
 
     if(twoEnzymeVer==0):
-      F = inner(grad(u),grad(v))*dx
-      L = 0
+      form = inner(grad(u),grad(v))*dx 
     else:
       form = inner(grad(u),grad(v))*dx(1)
-      beta = Constant(0.)
-      form += inner(beta,v)*ds
+      # ???? why is this here?/
+      #beta = Constant(0.)
+      #form += inner(beta,v)*ds
 
-      F = lhs(form)
-      L = rhs(form) 
+    F = lhs(form)
+    L = rhs(form) 
 
 
     # apply Neumann cond 
@@ -275,12 +276,12 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
 
     # Solve the problem
     # prob. is linear in u, so technically don't need to use a non-linear solver....
-    if(twoEnzymeVer==0):
-      solve(F==L, u, problem.bcs)
-      x = u
-    else:
-      x=Function(V)
-      solve(F==L, x, problem.bcs)
+    x=Function(V)
+    lvproblem = LinearVariationalProblem(F,L, x, bcs=problem.bcs)
+    solver = LinearVariationalSolver(lvproblem)
+    solver.parameters["linear_solver"] = "gmres"
+    solver.parameters["preconditioner"] = "ilu"
+    solver.solve()
 
 
     # PKH: do I need to apply the initial condition? 

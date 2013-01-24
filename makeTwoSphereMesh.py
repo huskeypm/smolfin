@@ -136,8 +136,10 @@ def markBoundaries(problem):
     nO=view.PrintBoundary(problem.mesh,bcO,file="sphereO")#,dbg=1)
     bcu = DirichletBC(V, Constant(8), subdomains,tes.markerUnmarked)
     nUnmarked = view.PrintBoundary(problem.mesh,bcu,file="unmarked",dbg=1)
-    if(n1!=n2 or n1!=nO or nUnmarked > 0):
+    if(nUnmarked > 0):
       raise RuntimeError("SOmethign fishy happened with meshes. DYING") 
+    if(n1!=n2 or n1!=nO):
+      print "WARNING: number of vertices on two spheres differ -dbl check"
   #bc1 = DirichletBC(V, Constant(0), subdomains,tes.markerSubstrateEnzyme)
   ## neumann implicit 
   #bcO = DirichletBC(V, Constant(1), subdomains,tes.markerOuter)
