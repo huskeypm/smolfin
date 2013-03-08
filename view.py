@@ -95,17 +95,29 @@ def JournalFig(scale=4): # this is the scaleup needed for DPI
 def plotslice(problem,result,title="no title",fileName="slice.png",show=0):
     plotslicegeneral(problem.mesh.coordinates(),result.up.vector(),title=title,fileName=fileName,show=show)
 
-def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,range=50):
+def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,range=50,grid=0):
     import numpy as np
     #meshcoor = problem.mesh.coordinates()
     femDim = np.shape(meshcoor)[1]
     
     # assuming molecule is within 50 of middle of grid 
     # want 500 points in each dir (resolution)
-    numpt = 500
-    incr = numpt/ (2 * range) 
     #(grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(incr*1j),-range:range:(incr*1j)]
-    (grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(numpt*1j),-range:range:(numpt*1j)]
+    if(len(grid)==1):
+      numpt = 50
+      incr = numpt/ (2 * range) 
+      (grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(numpt*1j),-range:range:(numpt*1j)]
+      x1 = np.linspace(-range,range,numpt)
+      x2 = np.linspace(-range,range,numpt)
+      X1,X2 = np.meshgrid(x1,x2)
+    else:
+      (grid_x,grid_y,grid_z) = grid
+      print "Assumin XY plot"
+      # get dim--> sort by biggest entries --> take first two 
+      dims = ((np.sort(np.shape(grid)))[::-1])[0:2]
+      X1 = np.reshape(grid_x,dims)
+      X2 = np.reshape(grid_y,dims)
+
     from scipy.interpolate import griddata
     #slice = griddata(meshcoor, result.up.vector(), (grid_x, grid_y,grid_z),method="linear")
     if(femDim==3):
@@ -114,9 +126,6 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,
       slice = griddata(meshcoor, vals, (grid_x, grid_y),method="linear")
 
     slice[np.isnan(slice)]=0
-    x1 = np.linspace(-range,range,numpt)
-    x2 = np.linspace(-range,range,numpt)
-    X1,X2 = np.meshgrid(x1,x2)
 
     
 
