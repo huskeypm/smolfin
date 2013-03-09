@@ -8,6 +8,7 @@ import numpy as np
 # -validate all aspects of code 
 #  The sinh expression initially comes out as zero, so it never looks like it is used in the form expression 
 # -implement log function 
+# -wholeDom prob. I think is behaving reasonably (need to visualize the potential in the exterior domain at a different dynamic range [0-10] than the interior domain)
 
 
 msg="""
@@ -34,14 +35,15 @@ class params:
   dim = 2  # 2d mesh 
   molRad = 1.5 # radius of molecule [A]
   molMarker = 2 # marker for molecular boundary 
-  eps = 0.001  # epsilson for 'error'
-  domRad = 5.  # radius of domain [A] (kind of, since square)
+  epsError = 0.001  # epsilson for 'error'
+  domRad = 10.  # radius of domain [A] (kind of, since square)
   domMarker = 3  # marker for domain boundary 
   z = 1.       # unit charge 
   ec = 8.854187817e-12 # electric constant [C^2/(Jm)]
   M_TO_ANG = 1e-10
   J_TO_KCAL = 0.000239005736
   ec = ec / (M_TO_ANG * J_TO_KCAL) # ec [C^2/kcal A]
+  ec = 1.0
   epsilonExterior = 80. # dielectric constant in exterior []
   kappa = 1/10.  # Inverse dybye length [1/A] (should be determined by ionic strengths directly) 
   center = np.zeros(dim)      
@@ -60,20 +62,20 @@ class params:
 
 class molecularBoundary(SubDomain):
   def inside(self,x,on_boundary):
-    result = np.linalg.norm(x-params.center) < (params.eps+params.molRad)
+    result = np.linalg.norm(x-params.center) < (params.epsError+params.molRad)
     result = result and on_boundary
     return result      
 
 class domainBoundary(SubDomain):
   def inside(self,x,on_boundary):
-    result = np.linalg.norm(x-params.center) > (-params.eps+params.domRad)
+    result = np.linalg.norm(x-params.center) > (-params.epsError+params.domRad)
     result = result and on_boundary
     return result      
 
 # exterior domain 
 class OmegaOutside(SubDomain):
     def inside(self, x, on_boundary):
-      result = np.linalg.norm(x-params.center) > (-params.eps+params.molRad)
+      result = np.linalg.norm(x-params.center) > (-params.epsError+params.molRad)
       #print "outside"
       #print result 
       return result 
@@ -81,7 +83,7 @@ class OmegaOutside(SubDomain):
 # interior domain 
 class OmegaInside(SubDomain):
     def inside(self, x, on_boundary):
-      result = np.linalg.norm(x-params.center) <=(-params.eps+params.molRad)
+      result = np.linalg.norm(x-params.center) <=(-params.epsError+params.molRad)
       #print x
       #print params.center
       #print "inside"
@@ -115,7 +117,7 @@ def doWholeDomainPB():
   ## mesh/functions 
   square=1 
   if square:
-    mesh = UnitSquare(100,100)
+    mesh = UnitSquare(50,50)
     mesh.coordinates()[:] = scale * mesh.coordinates()
   else:
     # domain assigment doesn't seem to work correctly (fails on 'choose' funtion 
@@ -129,7 +131,6 @@ def doWholeDomainPB():
 
   ## point source 
   params.center = scale*np.array([0.5,0.5])
-  print params.center
   p = Point(params.center[0],params.center[1])  
   #c = PointSource(V,p,magnitude=1) 
   q1 = 1. # [e]
@@ -152,13 +153,15 @@ def doWholeDomainPB():
   subdomain1.mark(subdomains, 1)
  
   eps_values = [params.epsilonExterior, 1.]  # values of k in the two subdomains
-  kappa_values = [params.epsilonExterior*params.kappa**2, 0.]  # values of k in the two subdomains
+  kappa_values = [params.epsilonExterior*params.kappa**2, params.epsError]  # values of k in the two subdomains
   #for cell_no in range(len(subdomains.array())):
   #  subdomain_no = subdomains.array()[cell_no]
   # eps.vector()[cell_no] = eps_values[subdomain_no]
   help = np.asarray(subdomains.array(), dtype=np.int32)
   eps.vector()[:] = np.choose(help, eps_values)
+
   kappa.vector()[:] = np.choose(help, kappa_values)
+  #xkappa = eps
 
 
   ## Define variational problem
@@ -170,11 +173,11 @@ def doWholeDomainPB():
   # eps*grad(u)grad(v) = kappa^2 uv
   form += -1*kappa *u*v*dx
 
-  d= 0.1
+  d= 1.0
   factor = 4 * np.pi * params.ec*params.ec / (params.kT)
   norm = 1/(d * np.sqrt(np.pi*2))
-  #form += Expression("factor*norm *exp(-( (x[0]-xC)*(x[0]-xC) + (x[1]-yC)*(x[1]-yC))/(2*d*d))",\
-  #                    xC=params.center[0],yC=params.center[1],d=d,norm=norm,factor=factor)*v*dx
+  form += Expression("factor*norm *exp(-( (x[0]-xC)*(x[0]-xC) + (x[1]-yC)*(x[1]-yC))/(2*d*d))",\
+                      xC=params.center[0],yC=params.center[1],d=d,norm=norm,factor=factor)*v*dx
   A = lhs(form)
   b = rhs(form)
 
