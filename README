@@ -16,3 +16,7 @@ protein-ligand association rates with post-encounter effects: applications to
 calcium binding in troponin C and SERCA,Computational Science & Discovery, 2012.
 http://iopscience.iop.org/1749-4699/5/1/014015?fromSearchPage=true
 
+
+Unit test:
+source rocce.bash
+python smol.py -root ./example/sphere

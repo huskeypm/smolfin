@@ -1,4 +1,4 @@
-"
+"""
 ----------------------------------
 Smolfin - a numerical solver of the Smoluchowski equation for interesting geometries
 Copyright (C) 2012 Peter Kekenes-Huskey, Ph.D., huskeypm@gmail.com
@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 ----------------------------------------------------------------------------
-"
+"""
 
 #
 # This script computes kon within binding channel 

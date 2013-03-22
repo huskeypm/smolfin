@@ -1,4 +1,4 @@
-"
+"""
 ----------------------------------
 Smolfin - a numerical solver of the Smoluchowski equation for interesting geometries
 Copyright (C) 2012 Peter Kekenes-Huskey, Ph.D., huskeypm@gmail.com
@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 ----------------------------------------------------------------------------
-"
+"""
 from dolfin import *
 import numpy as np
 #import modelparameters
@@ -60,6 +60,7 @@ class params:
   epsError = 0.001  # epsilson for 'error'
   domRad = 10.  # radius of domain [A] (kind of, since square)
   domMarker = 3  # marker for domain boundary 
+  
   z = 1.       # unit charge 
   ec = 8.854187817e-12 # electric constant [C^2/(Jm)]
   M_TO_ANG = 1e-10
@@ -67,19 +68,23 @@ class params:
   ec = ec / (M_TO_ANG * J_TO_KCAL) # ec [C^2/kcal A]
   ec = 1.0
   epsilonExterior = 80. # dielectric constant in exterior []
-  kappa = 1/10.  # Inverse dybye length [1/A] (should be determined by ionic strengths directly) 
   center = np.zeros(dim)      
   kT = 0.59	# energy [kcal/mol]
-  beta = 1/kT
 
   # ion
-  ionC = 1. # ion conc [M]
+  ionC = .150 # ion conc [M]
   ionRad=2. # ion radius [A]
 
   # modes
   mode = "linear"# linear, nonlinear, finitesize 
   mode = "nonlinear"
   mode = "finite"    
+
+
+  #kappa = 1/10.  # Inverse dybye length [1/A] (should be determined by ionic strengths directly) 
+  beta = 1/kT
+  ikappa  = 0.304 / np.sqrt(ionC) # Debye length [A], "Intermoplecular and surface forces, Israelachvili" 
+  kappa = 1/ikappa
 
 
 class molecularBoundary(SubDomain):
@@ -137,7 +142,7 @@ def doit(filename):
 def doWholeDomainPB():
   scale = 2*params.domRad 
   ## mesh/functions 
-  square=1 
+  square=0 
   if square:
     mesh = UnitSquare(50,50)
     mesh.coordinates()[:] = scale * mesh.coordinates()
@@ -152,6 +157,7 @@ def doWholeDomainPB():
 
 
   ## point source 
+  print "Point source is not functional"
   params.center = scale*np.array([0.5,0.5])
   p = Point(params.center[0],params.center[1])  
   #c = PointSource(V,p,magnitude=1) 
@@ -266,6 +272,8 @@ def doPB(mesh):
     form += -1*params.epsilonExterior*params.kappa*params.kappa *u*v*dx
   # eps*grad(u)grad(v) = kappa^2 sinh(u)*v
   elif(params.mode=="nonlinear"):
+    print "Idiot, your weak form is non-linear in u!"
+    quit()
     print "Using nonlinear code"
     namespace["sinh"] = sinh
     sinh_expr = eval(str(-1*params.epsilonExterior*params.kappa*params.kappa * sinh()), namespace, {"x":u})
@@ -282,6 +290,8 @@ def doPB(mesh):
 
   # eq (7) notes.pdf
   elif(params.mode=="finite"):
+    print "Idiot, your weak form is non-linear in u!"
+    quit()
     print "WARNING: hyperbolic sine not recognized"
     arg = params.z*params.beta*params.ec*u
 
