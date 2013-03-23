@@ -58,7 +58,7 @@ class params:
   molRad = 1.5 # radius of molecule [A]
   molMarker = 2 # marker for molecular boundary 
   epsError = 0.001  # epsilson for 'error'
-  domRad = 10.  # radius of domain [A] (kind of, since square)
+  domRad = 5.  # radius of domain [A] (kind of, since square)
   domMarker = 3  # marker for domain boundary 
   
   z = 1.       # unit charge 
@@ -77,8 +77,8 @@ class params:
 
   # modes
   mode = "linear"# linear, nonlinear, finitesize 
-  mode = "nonlinear"
-  mode = "finite"    
+  #mode = "nonlinear"
+  #mode = "finite"    
 
 
   #kappa = 1/10.  # Inverse dybye length [1/A] (should be determined by ionic strengths directly) 
@@ -97,6 +97,8 @@ class domainBoundary(SubDomain):
   def inside(self,x,on_boundary):
     result = np.linalg.norm(x-params.center) > (-params.epsError+params.domRad)
     result = result and on_boundary
+    #print x
+    #print result
     return result      
 
 # exterior domain 
@@ -128,7 +130,7 @@ def cosh(x=0):
 
 
 # Create mesh and define function space
-def doit(filename):
+def doOuterDomainPB(filename):
  
   # Create mesh and define function space
   debug=0
@@ -139,13 +141,15 @@ def doit(filename):
 
   doPB(mesh)
 
-def doWholeDomainPB():
+def doWholeDomainPB(fileIn):
+  params.domRad = 10.  # radius of domain [A] (kind of, since square)
   scale = 2*params.domRad 
   ## mesh/functions 
-  square=0 
+  square=1 
   if square:
-    mesh = UnitSquare(50,50)
+    mesh = UnitSquare(50,50)   
     mesh.coordinates()[:] = scale * mesh.coordinates()
+    print "I lied, using hardcoded geom"
   else:
     # domain assigment doesn't seem to work correctly (fails on 'choose' funtion 
     mesh = Mesh("sphere_2d_entire.xml") 
@@ -344,22 +348,28 @@ if __name__ == "__main__":
   if len(sys.argv) < 2:
       raise RuntimeError(msg)
 
-  fileIn= "sphere2d.xml"
+  fileIn= "./example/sphere/sphere2d.xml"
+  mode = "outer"
   if(len(sys.argv)==3):
     print "arg"
 
   for i,arg in enumerate(sys.argv):
     if(arg=="-nonlinear"):
       params.mode="nonlinear"
-    if(arg=="-wholedom"):
-      doWholeDomainPB()
+      print "not functional"
       quit()
+    if(arg=="-wholedom"):
+      mode = "wholedom"
+      fileIn= "./example/sphere/sphere_2d_entire.xml"
 
 
    
 
 
 
-  doit(fileIn)
+  if(mode=="wholedom"):
+    doWholeDomainPB(fileIn)
+  else: 
+    doOuterDomainPB(fileIn)
 
 
