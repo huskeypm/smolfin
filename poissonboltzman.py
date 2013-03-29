@@ -341,6 +341,24 @@ def doPB(mesh):
 
   return x
 
+def Validation():
+  # See 
+
+  # load sphere of radius R
+  # compute u(r=R) as Dirichlet
+  # compute u(r=Outer) as Dirichlet
+  # how well does solution match u(r) between R and Outer?
+
+
+  # load 'entire' mesh
+  # assign discontinuous epsilon, kappa
+
+
+
+  
+
+  
+
 #sphere
 if __name__ == "__main__":
 
