@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 ----------------------------------------------------------------------------
 """
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
 from dolfin import *
 import numpy as np
 import sys
@@ -41,7 +43,7 @@ Purpose:
   Tempate for solving (non)-linear poisson boltzmann equation 
 
 Usage:
-  poissonboltzmann.py -linear/-nonlinear/-finite/-wholedomain
+  poissonboltzmann.py -linear/-nonlinear/-finite/-wholedomain/-validation
   
 Notes: 
   Guaranteed to be wrong for right now!!
@@ -52,42 +54,67 @@ Author:
 
 
 """
+## interpolation has been validated 
+# Verified that Expression is being appropriately interpolated to mesh (3D sphere, Gamer output, 1D line and analytical)
 
 
-print "WARNING: This code is no-where close to being validated (use at your own risk)"
+minr = 12.
+maxr = 22.
 
 class params:
-  dim = 2  # 2d mesh 
-  molRad = 1.5 # radius of molecule [A]
-  molMarker = 2 # marker for molecular boundary 
-  epsError = 0.001  # epsilson for 'error'
-  domRad = 5.  # radius of domain [A] (kind of, since square)
-  domMarker = 3  # marker for domain boundary 
-  
-  z = 1.       # unit charge 
+
+  ## Parameters that are generally fixed
+  # Standard units: A, mV, kcal, M
+
+  # ec / 4 pi eps = 14.3840 [V Angstoms] 
+  # --> eco4pieps = 14.384e3 [mV Angstroms]
+  eco4pieps = 14.384e3 # conversion factor [mV Angstroms]
+  #eco4pieps = 14.384 # [V Ang]
+  kT = 0.59	# energy [kcal/mol]
+  beta = 1/kT
   ec = 8.854187817e-12 # electric constant [C^2/(Jm)]
   M_TO_ANG = 1e-10
   J_TO_KCAL = 0.000239005736
   ec = ec / (M_TO_ANG * J_TO_KCAL) # ec [C^2/kcal A]
-  ec = 1.0
   epsilonExterior = 80. # dielectric constant in exterior []
+
+  ## Domain-specific parameters 
+  dim = 2 # grid dimensions 
   center = np.zeros(dim)      
-  kT = 0.59	# energy [kcal/mol]
+  #dim = 2  # 2d mesh 
+  molRad=12.5 # radius of internal boundary in sphere
+  #a=10.0 # radius of internal boundary in sphere
+  molMarker = 2 # marker for molecular boundary 
+  domMarker = 3  # marker for domain boundary 
+  epsError = 0.001  # epsilson for 'error'
+  epsError = 3.000  # epsilson for 'error' in selecting boundary
+  domRad = 5. * molRad # radius of domain [A] (kind of, since square)
+  
+  ## System-specific parameters
+  z = -3.       # unit charge 
 
   # ion
   ionC = .150 # ion conc [M]
   ionRad=2. # ion radius [A]
+  kappa = 0.328 * np.sqrt(ionC) # inverse debye length for monovalent specieds [1/A]
+  ikappa  = 1/kappa # Debye length [A], "Intermoplecular and surface forces, Israelachvili" 
 
-  # modes
+  ## solver modes
   mode = "linear"# linear, nonlinear, finitesize 
   #mode = "nonlinear"
   #mode = "finite"    
 
 
-  #kappa = 1/10.  # Inverse dybye length [1/A] (should be determined by ionic strengths directly) 
-  beta = 1/kT
-  ikappa  = 0.304 / np.sqrt(ionC) # Debye length [A], "Intermoplecular and surface forces, Israelachvili" 
-  kappa = 1/ikappa
+
+## expression
+def DebyeHuckelExpr():
+  # e^{ka}/(1+ka) Z ec / (4 pi eps eps0) * e^{-kr}/r
+  prefac=params.z * np.exp(params.kappa*params.molRad) * params.eco4pieps 
+  prefac/=params.epsilonExterior*(1+params.kappa*params.molRad)
+  # f is in units [mV]
+  f=Expression("prefac*exp(-k*sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]))/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])",prefac=prefac,k=params.kappa)
+  # validated using a=10.0, ionC=0.1, Z=5 
+  return f
 
 # share params 
 pbs.params = params
@@ -96,6 +123,9 @@ class molecularBoundary(SubDomain):
   def inside(self,x,on_boundary):
     result = np.linalg.norm(x-params.center) < (params.epsError+params.molRad)
     result = result and on_boundary
+#    if result:
+#      print np.linalg.norm(x)
+#      print x
     return result      
 
 class domainBoundary(SubDomain):
@@ -106,20 +136,9 @@ class domainBoundary(SubDomain):
     #print result
     return result      
 
-# Create mesh and define function space
-def doOuterDomainPB(filename):
- 
-  # Create mesh and define function space
-  debug=0
-  if(debug):   
-    mesh = UnitCube(8,8,8)
-  else:
-    mesh = Mesh(filename)
 
-  doPB(mesh)
+def SolvePoissonBoltzmann(mesh):
 
-
-def doPB(mesh):
   V = FunctionSpace(mesh, "Lagrange", 1)
 
   ## Define boundary conditions
@@ -133,18 +152,27 @@ def doPB(mesh):
   # Analytical solution for linearized PBE for atom of radius R and charge q
   # see Eq 5.1 [1]	
   #M. Holst, N. Baker, and F. Wang, JCC, v21, n15,pp1319-1342, 2000
-  q = params.ec * params.z
-  k = params.kappa/np.sqrt(params.epsilonExterior)
-  u0 = Expression("q/epsilon*R*(1-k*R/(1+k*a))",\
-    q=q,k=k,epsilon=params.epsilonExterior,\
-    R=params.molRad,a=params.molRad)    
-  bcs.append(DirichletBC(V, u0, subdomains,params.molMarker))
+  #q = params.ec * params.z
+  #k = params.kappa/np.sqrt(params.epsilonExterior)
+  #u0 = Expression("q/epsilon*R*(1-k*R/(1+k*a))",\
+  #  q=q,k=k,epsilon=params.epsilonExterior,\
+  #  R=params.molRad,a=params.molRad)    
+  f = DebyeHuckelExpr()
+  bcs.append(DirichletBC(V, f, subdomains,params.molMarker))
+
+  # test 
+  m = Function(V)
+  #bc = DirichletBC(V,Constant(1.),boundary)
+  #bc.apply(m.vector())
+  bcs[0].apply(m.vector())
+  File("test.pvd") << m
+
 
   # define BC on domainboundary (potential should be zero at boundary) 
   boundary = domainBoundary()
   boundary.mark(subdomains,params.domMarker)
-  u0 = Constant(0.0)
-  bcs.append(DirichletBC(V, u0, subdomains,params.domMarker))
+  bcs.append(DirichletBC(V, f, subdomains,params.domMarker))
+
   
   
   ## Define variational problem
@@ -177,26 +205,134 @@ def doPB(mesh):
   print "Solving %s form of PBE" % params.mode
   x = Function(V)
   solve(lhs(form)==rhs(form), x, bcs)
-  # F = a
-  # problem = NonlinearVariationalProblem(F, x, bcs=bc, J=J)
-  # solver = NonlinearVariationalSolver(problem)
-  #solver.parameters["linear_solver"] = "gmres"
-  #solver.parameters["preconditioner"] = "ilu"
-  #solver.solve()
 
 
   File("out.pvd") << x
   
-  
-  ### EXTRAS
-  # use for interior problem later
-  if(0): 
-    # extract boundary values from previous solution and use in a new solution
-    bc2 = DirichletBC(V,x,boundary)
-    x2 = Function(V)
-    solve(a==L,x2,bc2)
+  return (V,x)
 
-  return x
+
+
+
+# Mostly to check that interpolations are correct
+def ValidateDebyeHuckel(meshFile):
+  f = DebyeHuckelExpr()
+
+  ## 3D mesh interpolation
+  #mesh = Mesh("sphere_mesh.xml.gz")
+  mesh = UnitSphere(50)
+  mesh.coordinates()[:] = 50*mesh.coordinates()[:]
+  V = FunctionSpace(mesh,"CG",1)
+  phi = interpolate(f,V)
+  #(gx,gy,gz) = np.mgrid[0:0:1j,0:0:1j,-255:255:500j]
+  (gx,gy,gz) = np.mgrid[0:0:1j,0:0:1j,minr:maxr:100j]
+  interp = griddata(mesh.coordinates(),phi.vector(),(gx,gy,gz))
+  interp[np.isnan(interp)]=0
+  interp = np.reshape(interp,100)
+  gz = np.reshape(gz,100)
+  
+  ## GAMER 
+  meshg = Mesh(meshFile)                
+  Vg = FunctionSpace(meshg,"CG",1)
+  phig = interpolate(f,Vg)
+  #(gx,gy,gz) = np.mgrid[0:0:1j,0:0:1j,-255:255:500j]
+  (gxg,gyg,gzg) = np.mgrid[0:0:1j,0:0:1j,minr:maxr:100j]
+  interpg = griddata(meshg.coordinates(),phig.vector(),(gxg,gyg,gzg))
+  interpg[np.isnan(interpg)]=0
+  interpg = np.reshape(interpg,100)
+  gzg = np.reshape(gzg,100)
+  
+  
+  
+  ## 1D mesh
+  mesh1 = UnitInterval(150) # 0..1
+  m=mesh1.coordinates()
+  mesh1.coordinates()[:]=m*(maxr-minr) + minr
+  V1 = FunctionSpace(mesh1,"CG",1)
+  phi1 = interpolate(f,V1)
+  gz1= np.mgrid[minr:maxr:100j]
+  interp1 = griddata(mesh1.coordinates(),phi1.vector(),gz1)
+  
+  ## analytical
+  print "WARNING: not sure what Expression assumes if just one argument is passed in"
+  def vec(r):
+    return f(r)
+  vecf = np.vectorize(vec)
+  
+  # double check
+  # agrees with Expression 
+  def func(r,prefac,k):
+    x = np.array([r,0,0])
+    p =prefac*np.exp(-k*np.sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]))/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
+    return p
+  
+  
+  ## compare 
+  plt.figure()
+  plt.plot(gz,interp,"r", label="3d UnitSphere")
+  plt.plot(gzg,interpg,"r.", label="3d gamer")
+  plt.plot(gz1,interp1,"g",label="1d UnitInterval")
+  plt.plot(gz1,vecf(gz1),"b",label="analytical")
+  plt.xlim([minr,maxr])
+  #plt.legend(['a','b','c','d'])
+  plt.legend(loc=2)                         
+  title = "Debye-Huckel potential for %4.1f [A] sphere, 1/k= %4.1f [A], z = %d" %\
+    (params.molRad, params.ikappa, params.z)
+  plt.title(title)
+  plt.xlabel("r [A]")
+  plt.ylabel("potential [mV]")
+  plt.gcf().savefig("debyehuckel.png")
+
+  
+def ValidatePoissonBoltzmann(meshFile):
+
+  ## GAMER 
+  mesh = Mesh(meshFile)               
+  (V,x) = SolvePoissonBoltzmann(mesh)
+
+  ## validation of solution 
+  # interpolate solution to line 
+  (gx,gy,gz) = np.mgrid[0:0:1j,0:0:1j,minr:maxr:100j]
+  interp = griddata(mesh.coordinates(),x.vector(),(gx,gy,gz))
+  interp[np.isnan(interp)]=0
+  interp = np.reshape(interp,100)
+  gz = np.reshape(gz,100)
+  
+  # analytical 
+  f = DebyeHuckelExpr()
+  phi = interpolate(f,V)
+  interpv = griddata(mesh.coordinates(),phi.vector(),(gx,gy,gz))
+  interpv[np.isnan(interpv)]=0
+  interpv = np.reshape(interpv,100)
+
+  ## compare 
+  plt.figure()
+  plt.plot(gz,interp,"r", label="Numerical")
+  plt.plot(gz,interpv,"b",label="analytical")
+  #plt.plot(gz1,vecf(gz1),"b",label="analytical")
+  plt.xlim([minr,maxr])
+  #plt.legend(['a','b','c','d'])
+  plt.legend(loc=2)                         
+  title = "Debye-Huckel potential for %4.1f [A] sphere, 1/k= %4.1f [A], z = %d" %\
+    (params.molRad, params.ikappa, params.z)
+  plt.title(title)
+  plt.xlabel("r [A]")
+  plt.ylabel("potential [mV]")
+  plt.gcf().savefig("debyehuckel_solve.png")
+
+# Performs validation against DebyeHuckel equation 
+def Validations():
+  params.dim = 3
+  params.center = np.zeros(params.dim)
+  # 15 ensures all points at boundary r=12.5 are found   
+  # 200 ensures all points at boundary r=225 are found   
+#  params.innerBound = 15
+#  params.outerBound = 220
+  meshFile = "./example/sphere/sphere_mesh.xml.gz"
+  ValidateDebyeHuckel(meshFile)
+  ValidatePoissonBoltzmann(meshFile)
+
+
 
 #sphere
 if __name__ == "__main__":
@@ -220,7 +356,13 @@ if __name__ == "__main__":
       fileIn= "./example/sphere/sphere_2d_entire.xml"
     if(arg=="-linear"):
       params.mode = "linear"
-      fileIn= "./example/sphere/sphere2d.xml"
+      params.molRad = 1.5
+      params.domRad = 5. 
+      #fileIn= "./example/sphere/sphere2d.xml"
+      fileIn= "./example/2d/volFrac_0.27.xml"
+    if(arg=="-validation"):
+      Validations()
+      quit()
 
 
   if(mode=="wholedomain"):
@@ -228,6 +370,10 @@ if __name__ == "__main__":
     pbs.molecularBoundary = molecularBoundary
     pbs.doWholeDomainPB(fileIn)
   else: 
-    doOuterDomainPB(fileIn)
+    params.epsError = 1.000  # epsilson for 'error' in selecting boundary
+    params.molRad=12.5 # actual radius is 
+    params.domRad=15.
+    mesh = Mesh(fileIn)
+    SolvePoissonBoltzmann(mesh)
 
 
