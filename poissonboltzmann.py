@@ -139,7 +139,7 @@ class domainBoundary(SubDomain):
     return result      
 
 
-def SolvePoissonBoltzmann(mesh):
+def SolvePoissonBoltzmann(mesh,meshType="dolfin"):
   #
   print "Assuming your sphere is centered at 000"
   params.dim = np.shape(mesh.coordinates())[1]
@@ -192,11 +192,17 @@ def SolvePoissonBoltzmann(mesh):
   
   # exterior
   # LHS  
-  form = -1*params.epsilonExterior*inner(grad(u), grad(v))*dx
+  if(meshType=="dolfin"): 
+    form = -1*params.epsilonExterior*inner(grad(u), grad(v))*dx
+  else:
+    form = -1*params.epsilonExterior*inner(grad(u), grad(v))*dx(1)
 
   # eps*grad(u)grad(v) = kappa^2 uv
   if(params.mode=="linear"):
-    form += -1*params.epsilonExterior*params.kappa*params.kappa *u*v*dx
+    if(meshType=="dolfin"): 
+      form += -1*params.epsilonExterior*params.kappa*params.kappa *u*v*dx
+    else:
+      form += -1*params.epsilonExterior*params.kappa*params.kappa *u*v*dx(1)
   # eps*grad(u)grad(v) = kappa^2 sinh(u)*v
   elif(params.mode=="nonlinear"):
     form = pbs.Nonlinear()
