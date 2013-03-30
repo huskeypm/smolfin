@@ -26,7 +26,9 @@ from dolfin import *
 import numpy as np
 import sys
 sys.path.append("/home/huskeypm/sources/jay/")
-import poissonboltzmannSpecial as pbs
+#import poissonboltzmannSpecial as pbs
+class empty():pass
+pbs = empty()
 #import modelparameters
 
 #
@@ -138,6 +140,11 @@ class domainBoundary(SubDomain):
 
 
 def SolvePoissonBoltzmann(mesh):
+  #
+  print "Assuming your sphere is centered at 000"
+  params.dim = np.shape(mesh.coordinates())[1]
+  params.center = np.zeros(params.dim)      
+
 
   V = FunctionSpace(mesh, "Lagrange", 1)
 
@@ -333,6 +340,7 @@ def Validations():
   ValidatePoissonBoltzmann(meshFile)
 
 
+  
 
 #sphere
 if __name__ == "__main__":
