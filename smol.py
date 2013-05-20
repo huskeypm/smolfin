@@ -28,7 +28,8 @@ import numpy as np
 #import Molecule
 from view import *
 from params import * # must do this for class
-# from smol import * 
+#from dolfin_adjoint import *
+
 
 class empty:pass
 
@@ -109,6 +110,12 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
     Jp = parms.D * grad(solutionVector) + parms.D *  parms.beta * solutionVector * grad(problem.pmf)
+
+    # adjoint stuff for later 
+    #u = solutionVector
+    #J = Functional(parms.D*inner(u, u)*dx)
+    #dJdD= compute_gradient(J, ScalarParameter(parms.D))
+    #print dJdD
 
     # Compute area for comparison 
     subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker),
@@ -274,17 +281,12 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     intfact_np = np.exp(-parms.beta * problem.pmf.vector()[:])
 
     # Create weak-form integrand (see eqn (6) in NOtes)
-    # NOTE: this is the u that satisfies Eqn (6), not the traditional Smol eqn
-    # form of the PDE
-    #  (no time dependence,so only consider del u del v term)
-
+    # grad(D e^(-) grad(u*e^(+))=0 --> Integral(e^(-) grad(u') grad(v)) =0,
+    # where u' = u*e^(+) 
     if(twoEnzymeVer==0):
-      form = inner(grad(u),grad(v))*dx 
+      form = intfact*inner(grad(u),grad(v))*dx 
     else:
-      form = inner(grad(u),grad(v))*dx(1)
-      # ???? why is this here?/
-      #beta = Constant(0.)
-      #form += inner(beta,v)*ds
+      form = intfact*inner(grad(u),grad(v))*dx(1)
 
     F = lhs(form)
     L = rhs(form) 
