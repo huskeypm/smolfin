@@ -109,6 +109,7 @@ class params:
 
 
 ## expression
+# Assumes charge is centered at origin
 def DebyeHuckelExpr():
   # e^{ka}/(1+ka) Z ec / (4 pi eps eps0) * e^{-kr}/r
   prefac=params.z * np.exp(params.kappa*params.molRad) * params.eco4pieps 

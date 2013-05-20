@@ -265,6 +265,12 @@ def generate_dolfin_mesh(coordinates, cells):
     # Assign coordinates and cells
     mesh.coordinates()[:] = coordinates
     mesh_cells = mesh.cells()
+    import dolfin
+    # get version 
+    ver = np.float((re.search("(^\d+.\d+)",dolfin.__version__).group(0)))
+    if(ver > 1.0):
+      RuntimeError("newer dolfin version doesn't support writeable cells.bye")
+      
     mesh_cells.flags.writeable = True
     mesh_cells[:] = cells
 

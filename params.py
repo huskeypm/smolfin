@@ -42,7 +42,7 @@ class params:
     self.noflux_molecular_boundary = Constant(0) # generally won't change this 
     self.active_site_absorb = Constant(0)
     self.bulk_conc = Constant(1.0)
-    self.D = 780.0 # diffusion constant, [um^2/s]
+    self.D = Constant(780.0) # diffusion constant, [um^2/s]
     self.Dchannel = 0.6*self.D # diffusion constant, [um^2/s]
     #self.D = 100.0 # diffusion constant, [um^2/s]
     self.beta = 1/0.693 # 1/kT, [kcal/mol]

@@ -18,5 +18,5 @@ http://iopscience.iop.org/1749-4699/5/1/014015?fromSearchPage=true
 
 
 Unit test:
-source rocce.bash
-python smol.py -root ./example/sphere
+#source rocce.bash (for rocce.ucsd.edu only) 
+python smol.py -root ./example/sphere/sphere
