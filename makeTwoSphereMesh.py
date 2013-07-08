@@ -40,6 +40,8 @@ margPct = 0.15
 minPct = 1-margPct
 maxPct = 1+margPct
 
+changsun=0
+
 
 # per Johan's suggeston for PETSC
 #parameters.linear_algebra_backend="Epetra"
@@ -247,7 +249,26 @@ def make_sphere_mesh(problem,dbg=0,dist=20):
   domain2.mesh = inner2
 
   meshName = make_twodomain_mesh(problem,dbg=dbg,dist=dist)
+
+  # add PMF information
+  computePMF(problem)
+
   return meshName 
+
+
+## add electrostaic potential 
+def computePMF(problem):
+
+  V = FunctionSpace(problem.mesh,"CG",1)
+  psi = Function(V)
+  if(changsun==0):
+    psi.vector()[:] = 0.
+  else:
+    expr = Expression("0")
+    psi.interpolate(expr)
+  
+  File("values.xml.gz") << psi
+  problem.psi = psi
 
 def make_twodomain_mesh(problem,dbg=0,dist=20):
   from gamer import SurfaceMesh, GemMesh    
@@ -408,6 +429,8 @@ Notes:
       solve = -1
     if(arg=="-skip"):
       dbg = "testsmol"
+    if(arg=="-changsun"):
+      changsun=1
 
   
   if(pdbMode==0):
