@@ -1,0 +1,567 @@
+
+% /net/home/huskeypm/Dropbox/Documents/Work/notes/projects/math
+% Uncomment to compile 
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{color}
+ \definecolor{deepred}{rgb}{0.5,0,0}
+ \definecolor{deepgreen}{rgb}{0,0.5,0.2}
+ \definecolor{deepblue}{rgb}{0,0,0.65}
+ \definecolor{navyblue}{rgb}{0,0.23,0.65}
+ \definecolor{brightblue}{rgb}{0.3,0.5,1}
+ \definecolor{pink}{rgb}{1.0,0.1,1.0}
+
+
+\usepackage[
+        plainpages=false,
+        pdfpagelabels,
+        backref={section},
+        %pagebackref=true,
+        pageanchor,
+        bookmarks=true,
+        bookmarksnumbered = true,
+        bookmarksopen=true,
+        bookmarksopenlevel=2,
+        colorlinks=true,
+        citecolor=deepgreen,%black,
+        urlcolor=blue,%black,
+        pagecolor=navyblue,%black,
+        linkcolor=deepred,%black,
+        ]{hyperref}
+
+
+\begin{document}
+\newcommand{\mynote}[1]{\textcolor{pink}{ #1 }}
+\newcommand\lbi{\begin{itemize}}
+\newcommand\lei{\end{itemize}}
+\newcommand\lbn{\begin{enumerate}}
+\newcommand\len{\end{enumerate}}
+
+\newcommand{\figsquick}[4]
+{
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[width=#4]{#1}
+  \end{center}
+  \caption{#3\label{figshort:#2}}
+\end{figure}
+}
+
+
+\newcommand{\figshort}[3]
+{
+  \figsquick{#1}{#2}{#3}{3in}
+}
+
+
+\newcommand\sect{Section ~\ref}
+\newcommand{\catwo}{Ca2+}
+\newcommand{\ol}{OL}
+\newcommand{\raw}{\rightarrow}
+\newcommand{\R}{R}
+\newcommand{\p}{\partial}
+\newcommand{\bx}{x}
+\newcommand{\ka}{ka}
+
+
+\textbf{Smolfin documentation}\\
+
+\textit{Peter Kekenes-Huskey (pkekeneshuskey at ucsd.edu) }\\ 
+
+\textsc{Smolfin} provides a numerical solution to the Smoluchowski equation, which models the diffusion of a ligand  subject to an electrostatic PMF. Here we solve for the steady-state distribution of \catwo, using a realistic representation of a protein geometry \cite{KekenesHuskey:vt}.
+
+In this tutorial, we produce a finite element mesh of a protein, determine the electrostatic potential about the protein, and numerically solve the Smoluchowski equation. 
+
+Organization:
+\lbn
+\item a short tutorial \sect{120717:nbcr:doc}
+\item Theory \sect{theory}
+\item Mesh generation \sect{meshgen}
+\item Electrostatic potential generation \sect{electropot}
+\item Running smol \sect{runsmol} 
+\item Analyzing results \sect{paraview}
+\item Installation \sect{install} 
+\len
+\newpage
+
+%\input{projects//nbcr/120717_doc}
+
+\section{The short tutorial:}
+\label{120717:nbcr:doc}
+
+\subsection{Prep}
+\lbi
+\item Follow Gamer prep described in manual ( \sect{meshgen}) to generate .m file (or download example file at 
+\url{http://mccammon.ucsd.edu/~huskeypm/share/workshop/troponin.m) }
+\item Follow APBS prep described in manual (\sect{electropot}) to generate .dx files (or download example \url{http://mccammon.ucsd.edu/~huskeypm/share/workshop/p.tgz})
+\lei
+
+\subsection{Run}
+\label{opal}
+\lbi
+\item navigate to 
+\url{http://rocce-vm6.ucsd.edu/opal2/CreateSubmissionForm.do?serviceURL=http://localhost:8080/opal2/services%2Fsmol_1.0}
+\figshort{/net/home/huskeypm/Dropbox/Documents/Work/notes/projects/nbcr/pics/smolfin_opal.png}{smolfin_opal}{Screen shot of Smolfin interface with files for uploading.}
+\item Upload \verb!${VAR}.m! file from MolecularMesh
+
+\item Optional: To include electrostatic potentials form APBS, 
+  \lbn
+  \item upload parameter file with
+\begin{verbatim}
+D 1
+q 1
+dx apbs-LowestResolution.dx
+...             
+dx apbs-HighestResolution.dx
+\end{verbatim}
+Here D [$\mu m^2/ms$] is the diffusion constant, q [e] is the charge, and dx is an apbs file with the electrostatic potential [kT/e]. (see example file at \url{http://mccammon.ucsd.edu/~huskeypm/share/workshop/params.txt}). \textbf{It is imperative that the .dx files are listed in the parameter file in the order of increasing resolution.}  
+
+  \item upload tarball of dx files 
+  \len
+
+\item Click submit. 
+\lei
+
+\subsection{Analyze}
+\lbi
+\item After a few minutes, the Opal service will guide you to an output directory with your files. There's a lot printed to the directory, but the most important files are packaged in a file called \verb! ${VAR}_outputs.tgz.!
+\item the following .pvd/.vtu files can be visualized in paraview (\sect{paraview})
+  \lbi
+  \item \verb! ${VAR}_values.pvd/.vtu! - paraview files for electrostatic potential
+  \item outputs/up.pvd/.vtu - steady-state solution for Ca2+ about troponin
+  \lei
+\lei
+
+\begin{verbatim}
+D 1
+q 1
+dx potential-15-PE0.dx
+dx potential-14-PE0.dx
+dx potential-13-PE0.dx
+dx potential-12-PE0.dx
+dx potential-11-PE0.dx
+dx potential-10-PE0.dx
+dx potential-09-PE0.dx
+dx potential-08-PE0.dx
+dx potential-07-PE0.dx
+dx potential-06-PE0.dx
+dx potential-05-PE0.dx
+dx potential-04-PE0.dx
+dx potential-03-PE0.dx
+dx potential-02-PE0.dx
+dx potential-01-PE0.dx
+dx potential-00-PE0.dx
+\end{verbatim}
+
+\newpage
+\section{Theory}
+\label{theory}
+The time-dependent Smoluchowski problem is formulated as follows: Find an ionic concentration function $\rho:\ol\Omega_e\times [0,T]\raw\R$ such that
+%\footnote{This combines notation from~\cite[Chapter 33]{LMW2012} and~\cite{Song2004Finite}}
+\begin{equation}
+\label{eq:smol-time-dep}
+\frac{\p\rho}{\p t} = D(\Delta\rho -\nabla\cdot(\beta\rho~\vec E)) 
+\end{equation}
+in $\Omega_e$, where $D$ is the diffusion constant, $\beta:=1/k_BT$ is the inverse Boltzmann energy with $k_B$ the Boltzmann constant and $T$ the temperature, and $\vec E$ is the electric field derived from the potential $\phi(\bx)$ on $\Omega_e$ via the standard equation $\vec E := -\nabla \phi$.
+The boundary conditions are taken to be
+\begin{equation}
+\label{eq:bcs-smol}
+\vec J\cdot\hat n = 0 \quad\text{on $\Gamma_s$,}\qquad \rho  = \alpha \quad\text{on $\Gamma_a$,}\qquad \rho = \rho_b \quad\text{on $\Gamma_e$,}
+%
+%
+% \rho(\bx, 0) & =  *** what is the initial condition? ***
+%
+%
+\end{equation}
+where $\vec J:= -D(\nabla\rho - \beta\rho\vec E)$ is the flux of $\rho$, $\alpha$ is the relative absorption of substrate at the active site, and $\rho_b$ is the bulk ionic concentration, assumed to be constant outside of $\Omega_e$, and $\hat{n}$ is the surface normal along $\Gamma$.
+To compute the reaction rate in this context, one solves the steady state problem
+\begin{equation}
+\label{eq:smol-ss}
+\frac{\p\rho}{\p t} = D(\Delta\rho -\nabla\cdot(\beta\rho~\vec E)) = 0,
+\end{equation}
+and computes the accompanying steady state flux $\vec J_{ss}$.
+The reaction rate for the steady state reaction rate with no channel (e.g. the diffusional encounter), $\ka$ is then determined by an area integral of the incident flux~\cite{Song2004Finite}
+\begin{equation}
+\label{eq:kss-nc}
+\ka = \frac 1{\rho_b}\int_{\Gamma_a}\vec J_{ss}\cdot\hat n~ds.
+\end{equation}
+
+\begin{equation}
+\label{eq:smol-time-dep}
+\frac{\p\rho}{\p t} = D(\Delta\rho -\nabla\cdot(\beta\rho~\vec E)) 
+\end{equation}
+
+
+
+
+\section{Mesh generation} 
+\label{meshgen}
+In the first step we create a volumetric mesh based on the molecular surface of a protein. We present two options for this 1) molecularmesh (preferred) \sect{molecmesh} 2) blamer \sect{blamer}.
+
+
+
+\subsection{Using MolecularMesh}
+\label{molecmesh}
+Firstly, creating a mesh with a globular protein and simple active site
+may be done using MolecularMesh (might remove this section completely
+once other script is developed more). Here we have provided an example
+using Troponin C, where we assume that the active site for calcium
+binding is around Glu76. For this tutorial, I will use the Troponin C
+structure (PDB code 1SPY). The output will be a tetrahedral mesh with important boundary conditions marked for the PDE.
+
+\paragraph{PQR file.}
+PQR files are a file format that supplements a traditional PDB structure file with atomic radii and charges, which are needed for electrostatic calculations.
+PQR files should be generated from the PDB files. See PDB2PQR from the
+APBS website or do the conversion using
+\url{http://kryptonite.nbcr.net/pdb2pqr/}
+Here we assume p.pqr was created for TnC (PDB Code 1SPY) based on a PDB structure 
+
+\paragraph{Finding the active site.}
+We first locate the position of one residues involved in binding Ca2+ (Glu76) by using 'grep':
+
+Find active site in molecule
+\begin{verbatim}
+   grep " 76 " tnc.pqr | grep " OE1 "
+\end{verbatim}
+
+Store coordinates into a file called \textsc{active.dat}  (replace 'coord' columns, using only 1 entry per row)  and adjust 'radius' to cover your expected binding region. All other fields can be left as is.
+
+\textsc{active.dat}
+\begin{verbatim}
+1
+xcoord ycoord zcoord radius 1
+\end{verbatim}
+
+
+\paragraph{Run)}
+Now we are ready to generate the .m file, which is a volumetric mesh. 
+%Please refer to "GAMer Mesh utilities" section of 'part1.pdf' for instructions on installing MolecularMesh. 
+MolecularMesh generates a this mesh, and is executed via:
+\begin{verbatim}
+MolecularMesh tnc.pqr 3 active.dat
+\end{verbatim}
+%FOR ME  ~/localTemp/srcs/fetk/gamer/tools/MolecularMesh/MolecularMesh p.pqr 3 active.dat
+%FOR ME scp p.pqr.output.out.m $ROCCE:/home/huskeypm/scratch/validation/tnc
+%FOR ME $
+
+This will generate a .m file named after the input tnc.pqr file. 
+
+
+(Proceed to \sect{runsmol} to run smol without electrostatics
+ or \sect{electropot} if you want to use the electrostatic
+potential in the association rate constant calculation)
+
+\mynote{NOTE: MolecularMesh might be broken on rocce. Please refer to \sect{sec:broke} for a work around.}
+
+
+\subsection{Using Blamer (Optional)}
+\label{blamer}
+Blamer provides a more flexible framework for creating and refining meshes. 
+
+To run a  blamer session
+\begin{verbatim}
+blender $MYDIR/gamer/tools/blender/blamer.blend
+$
+\end{verbatim}
+
+Optionally you may also create the following blamer to simplify calling blamer
+\begin{verbatim}
+alias blamer='export MYDIR=~/localTemp/blamer/; source $MYDIR/config.bash; blender $MYDIR/blamer.blend'
+\end{verbatim}
+
+\subsubsection{Making meshes}
+In the following example, we show how a user would create a simulation domain for two absorbing spheres surrounded by a larger sphere representing the outer boundary. A basic knowledge of Blender is required for this section, including the creation and manipulation of primitives, selection of vertices, toggling between object and edit mode.  These topics are widely addressed online.  
+
+In script window:
+\verb! Scripts->Mesh->Gamer Mesh Improvements (upy)!
+
+Surface mesh import: 
+Create 3 spheres (non-overlapping)
+
+Make one sphere contain the other two by changing the scale (200x200x200)
+NOTE: For each object, need to do \verb! Object->Clear/Apply->Apply Scale ! to make changes
+
+Boundary tab:
+\lbi
+\item select sphere, click New, rename Name and assign Marker, select sphere, click Assign
+\item For outer sphere, use Marker '5' for outer boundary
+\item For left sphere, use Marker '1' for active site
+\item For right sphere, use Marker '4' for molec boundary      
+\lei
+
+
+
+Tetrahedralize Tab:
+\lbi
+\item Select each mesh individuallly and click "Add selected"
+\item For the interior 'holes' use the "Use domain as a whole"
+\item Click tetrehedralize button 
+\lei
+
+%Note: I've found this part to be quite buggy, and you might get errors such as the following: 
+%\begin{verbatim}
+%Recovering boundaries.
+%  Delaunizing segments.
+%Error:  Invalid PLC. Two segments intersect.
+%  1st: (144, 35), 2nd: (289, 390).
+%\end{verbatim}
+%\textbf{Will provide tips soon}
+%
+
+%\subsection{Making script to create two-sphere case directly}
+%Alternatively, the same steps can be replicated by running a python
+%script (\mynote{NOT READY}) 
+%\begin{verbatim}
+%cd ~/localTemp/math/spheres
+%source $MYDIR/config.bash
+%makeTwoSphereMesh.py
+%$
+%\end{verbatim}
+
+
+\section{Electrostatic potential}
+\label{electropot}
+The electrostatic potential contributes to the second term of the electro-diffusion equation. Here we describe our procedure for generating the electrostatic potential for our molecular using APBS (in the form of .dx files). While in practice any PB solver may be used, currently our interpolator script only handles dx-format APBS output. 
+
+NOTE: always be especially careful that your mesh and pdb file for the APBS calculation are
+well-aligned. Otherwise this creates hassles down the road.
+
+The electrostatic potential is expected to vary quite rapidly near the molecular boundary of polar molecules and less so far from the molecular,especially in non-dilute solvents. For numerical PDE solutions, we thus require considerably higher resolution of the electrostatic field near molecule (approx 0.3 AA resolution). Meanwhile, the outerboundary should be sufficiently far from the molecular such that the electrostatic potential is neglible (about 500 \AA\ away in some cases, for non-dilute solutions). To maintain a tractible set of inputs, we compute the electrostatic potential at a range of resolutions, then interpolate these onto our finite element mesh. One recommendation is to define the cglen/fglen keywords in the APBS input file to first compute a coarse mesh, then a fine mesh centered about your active site:
+\begin{verbatim}
+elec
+    mg-auto
+    dime 65 65 65
+    cglen 1650 1650 1650  <------ coarse mesh: 1650 [A] / 65  grid points ~= 25 [A] resolution
+    cgcent mol 1
+    fglen 65 65 65                 <------ fine mesh 65 [A]/65 grid points = 1.0 [A] resolution 
+    fgcent XXX YYY ZZZ      <------ active site location
+    mol 1
+    lpbe
+......
+write pot dx potential-0065
+
+\end{verbatim}
+
+See APBS documentation \url{http://www.poissonboltzmann.org/apbs/user-guide/} for details.
+
+
+This excerpt from the APBS input file will generate generate a dx file at 1.0 [A] resolution. By using different fglen values, you can obtaining meshes that span the entire simulation domain. For this example, I'd recommend creating an input file where fglen equals a coarse value (say 1650) and a fine value (say 65) to generate two potential files (.dx):
+
+\mynote{provide example file somewhere with params}
+
+\begin{verbatim}
+potential_0065.dx
+potential_1650.dx
+\end{verbatim}
+
+In practice, you'll want several meshes to ensure the potential is smooth. If the potential is not sufficiently smooth, the steady state solution from Smolfin will appear spectled (e.g. its completely wrong!). 
+
+(Proceed to \sect{electroconv} to utilize these data in smol)
+
+
+% NOTES FOR ME
+%\textbf{This needs to be generalized}
+%APBS
+%\lbi
+%\item Use apbs in ~/Data/math/apbstemplate.in 
+%\begin{verbatim}
+%cp ~/Data/math/apbs/*in  .
+%cp ~/Data/math/apbs/createAPBSIn.bash .
+%cp ~/Data/math/apbs/runAPBSIn.bash .
+%cp ~/Data/math/apbs/rocce.bash .
+%\end{verbatim}
+%
+%\item replace gcent with active site location (done in
+%\begin{verbatim}
+%createAPBSIn.bash - replace value in active.dat)
+%%perl -ane 'next if $#F<4; print $_; system("perl_sub.pl apbstemplate.in \"XXX YYY ZZZ\" \"$F[0] $F[1] $F[2]\"");'  active.dat
+%%creates apbstemplate.in.sub
+%bash createAPBSIn.bash 
+%\end{verbatim}
+%
+%\item run apbs 
+%\begin{verbatim}
+%%~/u2/fetk/apbs-fetk/apbs/bin/apbs apbstemplate.in.sub
+%bash runAPBSIn.bash
+%\end{verbatim}
+%
+
+%\item  Scp dx files to rocce 
+%\begin{verbatim}
+%scp potential-*dx rocce.bash $ROCCE:/home/huskeypm/scratch/validation/xx_tnc
+%$
+%\end{verbatim}
+
+%\lei
+
+
+% FOR ME 
+%\subsubsection{Interpolation} 
+%
+%\textbf{This needs to be replaced with an easier version. Basically need to convert the interpolation code into python}
+%
+%\begin{verbatim}
+%# on local machine
+%cp ~/Data/math/apbs/smol.in
+%Create smol.in file using grids w highest resolution first
+%/net/home/huskeypm/localTemp/srcs/smol -ifnam smol.in  >& tnc.csv
+%Remove all but vertices from tnc.csv
+%replace comma w space
+%\end{verbatim}
+
+
+\section{Running smol}
+\label{runsmol}
+We present two ways to run smol:
+\lbn
+\item Through the opal webservice \sect{opal} (easy) 
+\item Manually on rocce \sect{roccerun} (more work)
+\len
+
+First load environmental variables
+
+\subsection{Manually running smolfin}
+\label{roccerun} 
+
+\subsubsection{Dolfin file creation}
+This step converts the data so far into the appropriate format for smolfin. 
+
+First load the appropriate environmental variables
+\mynote{MAKE SPECIFIC TO ROCCE}
+\begin{verbatim}
+export SMOLDIR=/home/huskeypm/localTemp/srcs/smol/
+source $SMOLDIR/config.bash
+\end{verbatim}
+
+
+
+To convert only the .m file to the appropriate format, run the
+following:
+
+\begin{verbatim}
+python mcsftodolfin.py tnc.m
+\end{verbatim}
+
+where \verb!tnc.m! is the file generated from MolecularMesh.
+This will create \textit{file\_mesh.xml.gz}  and
+\textit{file\_subdomain.xml.gz} files needed for smolfin (\sect{runme}) 
+
+
+
+%\item list potential files 
+%\begin{verbatim}
+%ln -s p.pqr.output.out.m tnc.m
+%export B=`ls -t potential-*dx | perl -ane 'chomp $_; print "-p $_ "'`
+%\end{verbatim}
+
+%\item convert
+\subsubsection{Interpolation of electrostatic potential (optional)}
+\label{electroconv}
+
+\begin{verbatim}
+python smoltodolfin.py -mcsf tnc.m <-csv electro.csv/$B> <-mgridloc [x,y,z]>  
+$
+\end{verbatim}
+
+where optional arguments are listed with \verb! < > !.  
+\lbi
+\item \verb!$B! - list of electrostatic potentials from APBS in order of increasing resolution:
+\begin{verbatim}
+export B='-p potential_1650.dx -p potential_0065.dx'
+$
+\end{verbatim}
+or you may do the following to list all files:
+\begin{verbatim}
+export B=`ls -t potential-*dx | perl -ane 'chomp $_; print "-p $_ "'`
+\end{verbatim}
+
+\item mgridloc - where molecule center is found in molecular mesh. Usually [0,0,0], but sometimes molecular center may be off-center 
+\item csv - csv of electro-static potential values  (for debugging mostly)
+\lei
+
+
+This will create \textit{file\_mesh.xml.gz}  and
+\textit{file\_subdomain.xml.gz} files needed for smolfin. You will also
+see \textit{file\_values.xml.gz}, which contain the electrostatic potential mapped to the finite element surface. It is recommended that you check that the potential mapped to your mesh using paraview
+(see the '\_values00000.vtu' created in the working directory)
+
+%\item NOTE: also check 120327\_troubleshoot fora workaround on fitting the potentials 
+%\lei
+
+\subsubsection{Running smol.py}
+\label{runme}
+The hard work is now done. Run smol: 
+
+%FOR ME/share/apps/python2.7/bin/python ~/sources/dolfin_smol/smol.py -root tnc >& run.out 
+\begin{verbatim}
+python ~/sources/dolfin_smol/smol.py   tnc_mesh.xml.gz tnc_subdomains.xml.gz  >& run.out 
+\end{verbatim}
+to run without the electrostatic potential, or 
+
+\begin{verbatim}
+python ~/sources/dolfin_smol/smol.py -root tnc >& run.out 
+\end{verbatim}
+
+to run with the electrostatic potential, where 'root' is the prefix for the gz files. You will obtain from this calculation an estimate of the kon value and the steady state distribution (in pvd/vtu format). The latter data may be viewed in paraview. 
+
+\section{Analysis}
+\label{paraview}
+
+Paraview can be used to analyze results.  pvd/vtu files are generated from the \textsc{smolfin} script which show the steady state
+distribution. 
+
+General instructions:
+\lbi
+\item Load pvd file into paraview
+\item take slice
+\item more details at \url{www.paraview.org}
+\lei
+
+\section{Moving on}
+Now that you've made it here, you may wish to experiment with parameters, such as the active site location or ionic strength. You may even consider mutating acidic residues of TnC near the active site to determine their impact on the \catwo distribution. To do so, I'd recommend using the VMD MutateResidue module. 
+
+\section{Installation}
+\label{install}
+
+\subsection{Dolfin/Dorsal installation}
+Dorsal is a builder that contains dolfin and its dependendancies. 
+It is available at \url{https://launchpad.net/dorsal}
+
+dolfin (https://launchpad.net/dolfin), which is a finite element solver that my smol code uses. Technically the program can be installed on ubuntu, for instance, using apt-get, but I've had the best luck installing dolfin using the dorsal installer (https://launchpad.net/dorsal). Dorsal takes maybe 1-2 hrs to install (very little user interaction, only at very beginning) on my virtual machine, but it's probably a lot quicker on a 'real' machine. 
+
+
+\subsection{smolfin}
+Smolfin uses dolfin to create meshes suitable for finite element solution and for solving the Smoluchowski equation. 
+An early version of the code can be obtained from
+\url{http://mccammon.ucsd.edu/~huskeypm/dolfin/dolfin_smol.tgz}. I plan to release the software on bitbucket, so stay tuned.
+
+\subsection{APBS}
+APBS is used to estimate the electrostatic potential about the protein. Please consult \url{http://www.poissonboltzmann.org} for details. 
+
+\subsection{paraview}
+Paraview is a recommended viewer for visualizing results from smolfin
+
+To install. 
+\begin{verbatim}
+sudo apt-get install paraview 
+\end{verbatim}
+
+Guides such as \mynote{www.paraview.org} provide detailed instructions for displaying values stored on the finite element mesh. For this example, the values stored by smolfin may represent the  steady state distribution or the electrostatic potential. 
+
+\subsection{Molec. mesh workaround}
+\label{sec:broke}
+
+Contact me for IP address
+\begin{verbatim}
+ssh -XY guest@XXXXX -p 2223
+
+  passwd: guest1979
+
+export PREFIX=/home/huskeypm/localTemp/srcs/gamer-src/
+export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+export FETK_INCLUDE=$PREFIX/include
+export FETK_LIBRARY=$PREFIX/lib
+/home/huskeypm/localTemp/srcs/gamer-src/bin/MolecularMesh 1CID.pdb 3 1CID_active_site.dat
+\end{verbatim}
+\end{document}
