@@ -343,19 +343,9 @@ def Validations():
 #  params.innerBound = 15
 #  params.outerBound = 220
   meshFile = "./example/sphere/sphere_mesh.xml.gz"
-  ValidatePoissonBoltzmann(meshFile)
   ValidateDebyeHuckel(meshFile)
+  ValidatePoissonBoltzmann(meshFile)
 
-  
-# from Graham equation for 1:1 electrolyte
-# Israelachvili pg 310
-# sigma = 0.117 sinh(psi0/51.4) sqrt([NaCl])
-# NaCl [M], psi0 [mV] 
-# sigma: surface Charge density [C/m^2] 
-# Compare w Tbl 14.1 of Israelachvili  
-def Grahame11(sigma,cNaCl):
-  psi=np.arcsinh(sigma/(0.117*np.sqrt(cNaCl)))*51.4      
-  return psi
 
   
 
@@ -400,5 +390,8 @@ if __name__ == "__main__":
     params.domRad=15.
     mesh = Mesh(fileIn)
     SolvePoissonBoltzmann(mesh)
+
+
+  raise RuntimeError("WARNING: This script is updated based on fenics-pb ; DO NOT REVISE")
 
 

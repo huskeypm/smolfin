@@ -45,7 +45,7 @@ class params:
     self.D = Constant(780.0) # diffusion constant, [um^2/s]
     self.Dchannel = 0.6*self.D # diffusion constant, [um^2/s]
     #self.D = 100.0 # diffusion constant, [um^2/s]
-    self.beta = 1/0.693 # 1/kT, [kcal/mol]
+    self.beta = 1/0.593 # 1/kT, [kcal/mol]
     self.valence = 2.0   # why do I need a constant? TODO  Constant(2)
 
     # validation 

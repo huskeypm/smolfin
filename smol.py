@@ -54,7 +54,10 @@ def CheckAreas(mesh):
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
 # V = can define alternative vector function space here instead of using one in 'problem'
-def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
+# psi is in units [kT], s.t. V = z * psi [kT] 
+def ElectrostaticPMF(problem,psi,z="useparams",V="none",thresh=True,q="none"):
+    if(q!="none"):
+      print("WARNING: Antiquated usage of 'q'. Use 'z' instead")
 
     if(type(V) is str and V=="none"):
       problem.pmf = Function(problem.V)
@@ -66,8 +69,8 @@ def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
     if(q=="useparams"):
       pmf[:] = parms.valence * psi.vector()[:]
     else:
-      print "Using q=%f for the ligand" % q
-      pmf[:] = q * psi.vector()[:]
+      print "Using z=%f for the ligand" % z
+      pmf[:] = z * psi.vector()[:]
 
     # Sanity check, otherwise need to make grid bigger to get 0 at boundary 
     amin = np.min(pmf)
@@ -81,15 +84,16 @@ def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
 
     # get too small
-    THRESH=20
-    idx = (np.where(pmf < -THRESH))[0]
-    if(np.size(idx)>0): 
-      print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
+    if(thresh):
+      THRESH=20
+      idx = (np.where(pmf < -THRESH))[0]
+      if(np.size(idx)>0): 
+        print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
 
-    # to large 
-    idx = (np.where(pmf > THRESH))[0]
-    if(np.size(idx)>0): 
-      print "Encountered %d values with very high PMF values/consider thresholding" % np.size(idx)
+      # to large 
+      idx = (np.where(pmf > THRESH))[0]
+      if(np.size(idx)>0): 
+        print "Encountered %d values with very high PMF values/consider thresholding" % np.size(idx)
     
     problem.pmf.vector()[:] = pmf
 
