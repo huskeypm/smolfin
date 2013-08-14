@@ -29,6 +29,7 @@ import numpy as np
 from view import *
 from params import * # must do this for class
 #from dolfin_adjoint import *
+gamer=False
 
 
 class empty:pass
@@ -287,7 +288,7 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     # Create weak-form integrand (see eqn (6) in NOtes)
     # grad(D e^(-) grad(u*e^(+))=0 --> Integral(e^(-) grad(u') grad(v)) =0,
     # where u' = u*e^(+) 
-    if(twoEnzymeVer==0):
+    if(twoEnzymeVer==0 or gamer):
       form = intfact*inner(grad(u),grad(v))*dx 
     else:
       form = intfact*inner(grad(u),grad(v))*dx(1)
@@ -383,7 +384,7 @@ def Debug():
 
   # if loading from APBS
   apbs =1
-  gamer= 0 # should never use this 
+  #gamer= 0 # should never use this 
   test = 0 # should never use this 
   if 0:
     1
@@ -392,7 +393,7 @@ def Debug():
     ProblemDefinition(problem)
 
   # sphere example
-  elif(gamer==1):
+  elif(gamer):
     problem = MeshNoPotential() # in old.py 
  
   elif(test==1):
@@ -451,7 +452,12 @@ def SimpleTest():
 
 if __name__ == "__main__":
   msg="""
-\nsmol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>
+\nsmol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> 
+  or
+  smol.py -root <file> [-gamer]
+
+Notes: 
+  Use '-gamer' if mesh was made using gamer
 """
 
 
@@ -459,6 +465,13 @@ if __name__ == "__main__":
   import sys
   if len(sys.argv) < 2:  
       raise RuntimeError(msg)
+
+  for i,arg in enumerate(sys.argv):
+    if(arg=="-gamer"):
+      gamer=True
+
+
+
 
   if(sys.argv[1]=="test"):
     print "In testing mode"
