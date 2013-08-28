@@ -10,3 +10,9 @@ export PYTHONPATH=/net/home/huskeypm/Sources/smolfin/:$PYTHONPATH
 export PYTHONPATH=/net/home/huskeypm/Sources/smolfin/:$PYTHONPATH
 export PYTHONPATH=/net/home/huskeypm/Sources/homogenization/:$PYTHONPATH
 
+
+
+export SRCDIR=/net/home/huskeypm/Sources/
+export VER=2.7
+export PREFIX=$SRCDIR/gamer-src/
+export PYTHONPATH=$PYTHONPATH:$PREFIX/lib/python$VER/site-packages
