@@ -468,9 +468,8 @@ Notes:
 
   for i,arg in enumerate(sys.argv):
     if(arg=="-gamer"):
+      print "Using gamer mesh" 
       gamer=True
-
-
 
 
   if(sys.argv[1]=="test"):
@@ -499,7 +498,8 @@ Notes:
     print "In run mode"
     problem.fileMesh = sys.argv[1]
     problem.fileSubdomains= sys.argv[2]
-    problem.filePotential= sys.argv[3]
+    if("xml" in sys.argv[3]):
+      problem.filePotential= sys.argv[3]
     Run(problem)
   
   else:
