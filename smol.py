@@ -62,7 +62,6 @@ def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
       problem.pmf = Function(V)
 
     pmf = np.zeros( psi.vector().size() ) 
-
     if(q=="useparams"):
       pmf[:] = parms.valence * psi.vector()[:]
     else:
@@ -458,9 +457,11 @@ if __name__ == "__main__":
 
   for i,arg in enumerate(sys.argv):
     if(arg=="-validation"):
-      raise RuntimeError("Need to add unit test for validation") 
+      #raise RuntimeError("Need to add unit test for validation") 
       import validation as val
+      val.parms=parms
       m1 = val.ValidationSphere(useStored=0)
+      quit()
     if(arg=="-charge"): 
       parms.valence = np.float(sys.argv[i+1]) 
 

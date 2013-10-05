@@ -31,9 +31,11 @@ import gating_smol as gating
 from LinearInteriorProblem import *
 from view import *
 
+import sys
+sys.path.append("example/serca/") 
+sys.path.append("example/troponin/") 
 
-import serca 
-import troponin
+
 
 class empty:pass
 
@@ -167,9 +169,10 @@ def ValidationChargedSphere(problem,root,useStored=1):
   ## w electro 
   # problem (do once using defaults)  
   problem.filePotential= root+"_values.xml.gz"
+  smol.parms = parms
   if(useStored==0):
     chargedresult = smol.Run(problem,pvdFileName="sphere_charge.pvd")
-    plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
+    #plotslice(problem,chargedresult,title="Charge",fileName="fig1b_sphere.png")
   else:
     print "Using stored values DONT TRUST";
     chargedresult = empty()
@@ -201,6 +204,8 @@ def ValidationChargedSphere(problem,root,useStored=1):
   r_Ang = parms.um_to_Ang * R
   kon_elec = 4 * np.pi * D * qEff * (np.exp(qEff/r_Ang)/(np.exp(qEff/r_Ang)-1)) * c
   kon_pred = chargedresult.kon*60. # 60 [s/min]
+  print kon_pred-8.354e11
+  assert(np.abs(kon_pred-8.354e11) < 0.01e11)
   print "kon_anal_elec %e pred %e [1/M min]" % (kon_elec, kon_pred)
 
   return chargedresult
@@ -210,17 +215,19 @@ def ValidationChargedSphere(problem,root,useStored=1):
 def ValidationSphere(useStored=0):
   # params 
   root = "/home/huskeypm/scratch/validation/sphere_120824a/sphere"
+  root = "./example/sphere/sphere"
   #root = "/home/huskeypm/scratch/validation/sphere/sphere"
   #root = "./sphere"
   problem.fileMesh = root+"_mesh.xml.gz"
   problem.fileSubdomains= root+"_subdomains.xml.gz"
+  smol.parms = parms
 
   ## No electro 
   # problem 
   problem.filePotential= "none"
   if(useStored==0):
     unchargedresult = smol.Run(problem,pvdFileName="sphere_nocharge.pvd")
-    plotslice(problem,unchargedresult,title="No charge",fileName="fig1a_sphere.png")
+    #plotslice(problem,unchargedresult,title="No charge",fileName="fig1a_sphere.png")
 
   else:
     print "Using stored values DONT TRUST"
@@ -240,8 +247,10 @@ def ValidationSphere(useStored=0):
   #kon_analy = 4 * np.pi * R * parms.D * parms.um3_to_invM
   # for conceptual reasons I redefine kon in terms of surface area
   kon_analy = (4 * np.pi * R**2)/R * parms.D * parms.um3_to_invM
+  print parms.D   
   print "kon_anal %e [1/Ms] %e [1/Mmin] pred %e [1/Ms]" % (kon_analy, kon_analy*60,\
      unchargedresult.kon)
+  assert(np.abs(unchargedresult.kon-6.587e9) < 0.01e9)
 
   ## Charged case
   chargedresult = ValidationChargedSphere(problem,root,useStored=useStored) 
@@ -302,7 +311,9 @@ Notes:
     
   elif(sys.argv[1]=="run"):
     m1 = ValidationSphere(useStored=0)
+    import serca 
     m2 = serca.Validation(useStored=0)
+    import troponin
     m3 = troponin.Validation(useStored=0)
     for i in m1:
       print i 

@@ -125,7 +125,7 @@ def plotslicegeneral(meshcoor,vals,title="no title",fileName="slice.png",show=0,
     # assuming molecule is within 50 of middle of grid 
     # want 500 points in each dir (resolution)
     #(grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(incr*1j),-range:range:(incr*1j)]
-    if(len(grid)==1):
+    if(grid!=0 and len(grid)==1):
       numpt = 50
       incr = numpt/ (2 * range) 
       (grid_x,grid_y,grid_z) = np.mgrid[0:0:1j,-range:range:(numpt*1j),-range:range:(numpt*1j)]

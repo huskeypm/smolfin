@@ -43,6 +43,7 @@ class params:
     self.active_site_absorb = Constant(0)
     self.bulk_conc = Constant(1.0)
     self.D = Constant(780.0) # diffusion constant, [um^2/s]
+    self.D = 780.0 # diffusion constant, [um^2/s]
     self.Dchannel = 0.6*self.D # diffusion constant, [um^2/s]
     #self.D = 100.0 # diffusion constant, [um^2/s]
     self.beta = 1/0.593 # 1/kT, [kcal/mol]
