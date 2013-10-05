@@ -29,7 +29,6 @@ import numpy as np
 from view import *
 from params import * # must do this for class
 #from dolfin_adjoint import *
-gamer=False
 
 
 class empty:pass
@@ -55,10 +54,7 @@ def CheckAreas(mesh):
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
 # V = can define alternative vector function space here instead of using one in 'problem'
-# psi is in units [kT], s.t. V = z * psi [kT] 
-def ElectrostaticPMF(problem,psi,z="useparams",V="none",thresh=True,q="none"):
-    if(q!="none"):
-      print("WARNING: Antiquated usage of 'q'. Use 'z' instead")
+def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
 
     if(type(V) is str and V=="none"):
       problem.pmf = Function(problem.V)
@@ -70,8 +66,8 @@ def ElectrostaticPMF(problem,psi,z="useparams",V="none",thresh=True,q="none"):
     if(q=="useparams"):
       pmf[:] = parms.valence * psi.vector()[:]
     else:
-      print "Using z=%f for the ligand" % z
-      pmf[:] = z * psi.vector()[:]
+      print "Using q=%f for the ligand" % q
+      pmf[:] = q * psi.vector()[:]
 
     # Sanity check, otherwise need to make grid bigger to get 0 at boundary 
     amin = np.min(pmf)
@@ -85,16 +81,15 @@ def ElectrostaticPMF(problem,psi,z="useparams",V="none",thresh=True,q="none"):
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
 
     # get too small
-    if(thresh):
-      THRESH=20
-      idx = (np.where(pmf < -THRESH))[0]
-      if(np.size(idx)>0): 
-        print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
+    THRESH=20
+    idx = (np.where(pmf < -THRESH))[0]
+    if(np.size(idx)>0): 
+      print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
 
-      # to large 
-      idx = (np.where(pmf > THRESH))[0]
-      if(np.size(idx)>0): 
-        print "Encountered %d values with very high PMF values/consider thresholding" % np.size(idx)
+    # to large 
+    idx = (np.where(pmf > THRESH))[0]
+    if(np.size(idx)>0): 
+      print "Encountered %d values with very high PMF values/consider thresholding" % np.size(idx)
     
     problem.pmf.vector()[:] = pmf
 
@@ -288,7 +283,7 @@ def SolveSteadyState(problem,pvdFileName="up.pvd",\
     # Create weak-form integrand (see eqn (6) in NOtes)
     # grad(D e^(-) grad(u*e^(+))=0 --> Integral(e^(-) grad(u') grad(v)) =0,
     # where u' = u*e^(+) 
-    if(twoEnzymeVer==0 or gamer):
+    if(twoEnzymeVer==0):
       form = intfact*inner(grad(u),grad(v))*dx 
     else:
       form = intfact*inner(grad(u),grad(v))*dx(1)
@@ -384,7 +379,7 @@ def Debug():
 
   # if loading from APBS
   apbs =1
-  #gamer= 0 # should never use this 
+  gamer= 0 # should never use this 
   test = 0 # should never use this 
   if 0:
     1
@@ -393,7 +388,7 @@ def Debug():
     ProblemDefinition(problem)
 
   # sphere example
-  elif(gamer):
+  elif(gamer==1):
     problem = MeshNoPotential() # in old.py 
  
   elif(test==1):
@@ -452,12 +447,7 @@ def SimpleTest():
 
 if __name__ == "__main__":
   msg="""
-\nsmol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> 
-  or
-  smol.py -root <file> [-gamer]
-
-Notes: 
-  Use '-gamer' if mesh was made using gamer
+\nsmol.py <test> or smol.py <mesh.gz> <subdomains.gz> <values.gz> or smol.py -root <file>
 """
 
 
@@ -467,10 +457,12 @@ Notes:
       raise RuntimeError(msg)
 
   for i,arg in enumerate(sys.argv):
-    if(arg=="-gamer"):
-      print "Using gamer mesh" 
-      gamer=True
-
+    if(arg=="-validation"):
+      raise RuntimeError("Need to add unit test for validation") 
+      import validation as val
+      m1 = val.ValidationSphere(useStored=0)
+    if(arg=="-charge"): 
+      parms.valence = np.float(sys.argv[i+1]) 
 
   if(sys.argv[1]=="test"):
     print "In testing mode"
@@ -498,8 +490,7 @@ Notes:
     print "In run mode"
     problem.fileMesh = sys.argv[1]
     problem.fileSubdomains= sys.argv[2]
-    if("xml" in sys.argv[3]):
-      problem.filePotential= sys.argv[3]
+    problem.filePotential= sys.argv[3]
     Run(problem)
   
   else:
