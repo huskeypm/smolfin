@@ -456,6 +456,14 @@ if __name__ == "__main__":
   if len(sys.argv) < 2:  
       raise RuntimeError(msg)
 
+  for i,arg in enumerate(sys.argv):
+    if(arg=="-validation"):
+      raise RuntimeError("Need to add unit test for validation") 
+      import validation as val
+      m1 = val.ValidationSphere(useStored=0)
+    if(arg=="-charge"): 
+      parms.valence = np.float(sys.argv[i+1]) 
+
   if(sys.argv[1]=="test"):
     print "In testing mode"
     Debug()
