@@ -158,7 +158,8 @@ def InterpolateAPBSdx(mesh,apbs,usesubset=0,mvalues=0,debugValues=0,mgridloc=[0,
 
 
     # get too small
-    ClipValues(pot,THRESH=999)
+    if clipValues:
+      ClipValues(pot,THRESH=999)
 
     apbs.values[:] = pot[:]
 
@@ -352,7 +353,7 @@ def InterpolateAPBScsv(mesh,csvfilename):
 
 # csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
 def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
-    csvfilename="none",writePotentialOnly=writePotentialOnly):
+    csvfilename="none",writePotentialOnly=writePotentialOnly,clipValues=True):
 
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
@@ -397,8 +398,9 @@ def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
     # Constrain potential to give values no higher than 55M (next to protein in stern layer) 
     # 55 = 1 exp(- q E /kT)
     # PKH 120731
-    maxPotent = np.log(55.) * (1/parms.beta) / parms.valence
-    ClipValues(mvalues,THRESH=maxPotent)
+    maxPotent = np.log(55.) * (1/parms.beta) / np.abs(parms.valence)
+    if clipValues:
+      ClipValues(mvalues,THRESH=maxPotent)
  
      
     from view import plotslicegeneral
@@ -418,6 +420,7 @@ def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
 
 if __name__ == "__main__":
 
+    clipValues=True;
     # ~/localTemp/NBCR/smol/apbs_fe/potential-0.dx
     #apbsfilename = ["example/molecule/potential-0.dx"]
     apbsfilenames=[]       
@@ -430,7 +433,7 @@ if __name__ == "__main__":
 
     import sys
     if len(sys.argv) <  3:
-        raise RuntimeError("expected an 1) -mcsf/mesh mcsf/mesh file and 2) -p apbs file(s) [in order of increasing resolution] < -mgridloc '0 0 0' -csv csvapbs>")
+        raise RuntimeError("expected an 1) -mcsf/mesh mcsf/mesh file and 2) -p apbs file(s) [in order of increasing resolution] < -mgridloc '0 0 0' -csv csvapbs -noclipping>")
 
     for i in np.arange(len(sys.argv)):
       if(sys.argv[i] == '-mcsf'):
@@ -455,6 +458,8 @@ if __name__ == "__main__":
       if(sys.argv[i] == '-mgridloc'):
         spl = sys.argv[i+1].split(' ')
         mgridloc=[ float(spl[0]), float(spl[1]), float(spl[2]) ]
+      if(sys.argv[i] == '-noclipping'):
+        clipValues=False
 
       
     if(len(apbsfilenames)==0 and csvfilename=='none'):
@@ -475,6 +480,6 @@ if __name__ == "__main__":
 
 
     convertAllAPBS(problem,apbsfilenames,mgridloc=mgridloc,\
-      csvfilename=csvfilename,writePotentialOnly=writePotentialOnly)
+      csvfilename=csvfilename,writePotentialOnly=writePotentialOnly,clipValues=clipValues)
     #convertAllAPBS(mcsffilename,apbsfilename,skipAPBS=1)
 
