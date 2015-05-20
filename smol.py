@@ -44,8 +44,8 @@ problem = problem()
 # Areas are given in Angstroms squared, if mesh prepared by gamer from molecular structure
 def CheckAreas(mesh):
     for m in np.array([1,4,5]):
-      areaExpr = Constant(1.)*ds(m) 
-      area = assemble(areaExpr, mesh=mesh)
+      areaExpr = Constant(1.)*ds(m,domain=mesh) 
+      area = assemble(areaExpr)
       print "Marker %d area: %f [A^2]" % (m,area) 
  
 ## PDE terms
@@ -117,6 +117,7 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     #print dJdD
 
     # Compute area for comparison 
+    raise RuntimeError("PKH needs to rewrite assemble commands for compatibility with recent dolfin") 
     subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker),
                                 mesh=problem.mesh,
                                 exterior_facet_domains = problem.subdomains)
@@ -177,7 +178,7 @@ def LoadFiles(problem):
     msg = "fileSubdomains %s does not exist" % problem.fileSubdomains
     raise RuntimeError(msg)
   else:
-    problem.subdomains = MeshFunction("uint", problem.mesh, problem.fileSubdomains)
+    problem.subdomains = MeshFunction("size_t", problem.mesh, problem.fileSubdomains)
 
 
 def ProblemDefinition(problem,boundaries=0):

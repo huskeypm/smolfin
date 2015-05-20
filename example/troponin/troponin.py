@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 ----------------------------------------------------------------------------
 """
+import sys
+sys.path.append("../../")
 
 import smol
 import InteriorProblemMaster
@@ -42,6 +44,38 @@ problem = smol.problem
 class empty:pass
 boundaries = empty()
 
+def SimpleTest():
+  import sys
+  sys.path.append("../../")
+  # smoll stuff 
+  import smol
+  parms = smol.parms
+  problem = smol.problem
+
+  # boundaries 
+  import TroponinBoundary as troponinboundaries
+  class empty:pass
+  boundaries = empty()
+  boundaries.activeSite = troponinboundaries.ActiveSite()
+  boundaries.bulkBoundary = troponinboundaries.BulkBoundary()
+
+  #resultstroponin = TnCTroponin(problem,boundaries=boundaries)
+  # on PKH
+  root = "/net/share/pmke226/data/smolfin_troponinc/tnc_isolated"
+  # on UCSD 
+  #root = "/net/data/huskeypm/GiKe11a/GiKe11a/tnc_isolated"
+  problem.fileMesh = root+"_mesh.xml.gz"
+  problem.fileSubdomains= root+"_subdomains.xml.gz"
+  problem.filePotential= root+"_values.xml.gz"
+  noElectro=0
+
+
+  #chg 
+  results= smol.Run(problem,boundaries=boundaries,pvdFileName=root+".pvd")
+  # unchg
+
+  print results.kon
+
 def TnCIsolated(problem,useStored=0):
     if (useStored==1):
       print "In debugging mode so skipping computation of smol and using hardcoded values" 
@@ -51,7 +85,8 @@ def TnCIsolated(problem,useStored=0):
       results = 0
 
     # exterior 
-    root = "/home/huskeypm/scratch/validation/tnc_isolated/tnc_isolated"
+    #root = "/home/huskeypm/scratch/validation/tnc_isolated/tnc_isolated"
+    root = "/net/data/huskeypm/GiKe11a/GiKe11a/tnc_isolated"
     problem.fileMesh = root+"_mesh.xml.gz"
     problem.fileSubdomains= root+"_subdomains.xml.gz"
 
@@ -154,4 +189,6 @@ if __name__ == "__main__":
 
   elif(sys.argv[1]=="run"):
       Validation()
+  elif(sys.argv[1]=="simple"):
+      SimpleTest()
 
