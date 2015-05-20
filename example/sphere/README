@@ -1,5 +1,5 @@
 To Run
-source ../../config.bash 
+# source ../../config.bash - no longer needed if fenics/dolfin installed via apt-get 
 python ../../smol.py  -root sphere
 
 

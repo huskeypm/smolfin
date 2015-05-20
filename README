@@ -1,4 +1,3 @@
-
 Smolfin is a tool for estimating diffusion-limited reactions between a 
 substrate and enzyme, based on the Smoluchowski electrodiffusion equation. 
 The software utilizes atomistic resolution structural data for the enzyme, 
@@ -20,3 +19,6 @@ http://iopscience.iop.org/1749-4699/5/1/014015?fromSearchPage=true
 Unit test:
 #source rocce.bash (for rocce.ucsd.edu only) 
 python smol.py -root ./example/sphere/sphere
+
+Prerequisites:
+Requires FEniCS/dolfin 1.5
