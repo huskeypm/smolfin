@@ -31,18 +31,18 @@ from mcsftodolfin import *
 from smol import * 
 from view import plotslicegeneral
 
-writePotentialOnly=0
+writePotentialOnly=False
 interpMethod="linear"
 #interpMethod="nearest"
 
 def get_range(mesh):
   return np.ceil(max(np.max(mesh.coordinates(),0) - np.min(mesh.coordinates(),0))/2)
 
-def write_smol_files(filename, mesh,u,writePotentialOnly=0): # , u,vertexmarkers,facetmarkers):
+def write_smol_files(filename, mesh,u,writePotentialOnly=False): # , u,vertexmarkers,facetmarkers):
     from dolfin import File
 
     # for dolfin
-    if(writePotentialOnly==0):
+    if(writePotentialOnly==False):
       fileMesh = filename+"_mesh.xml.gz"
       File(fileMesh) << mesh
 
@@ -271,7 +271,7 @@ def InterpolateAPBSdxs(mesh,apbsfilenames,mgridloc=-1):
     #print values
 
    # plot coverage
-    plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
+    #plotslicegeneral(mesh.coordinates(),coverage,fileName="coverage.png",range=range)
 
     return mvalues
 
@@ -311,8 +311,8 @@ def InterpolateAPBSdxs_SCIPY(apbsfilenames,mgridloc=-1):
       #print "%d->%d" % (len(zidx),len(zidxn))
     
       # hack to visualize
-      from view import plotslicegeneral
-      plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png")
+      #from view import plotslicegeneral
+      #plotslicegeneral(mesh.coordinates(),mvalues,fileName=apbsfilename+".png")
       print "Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
           #print np.isnan(mvalues)
           #print "WARNING: need to verify interpolation is correct (almost sure it is not correct)"
@@ -353,7 +353,7 @@ def InterpolateAPBScsv(mesh,csvfilename):
 
 # csvfilename - provide csv file of interpolated values (see 120327_troubleshoot.tex)
 def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
-    csvfilename="none",writePotentialOnly=writePotentialOnly,clipValues=True):
+    csvfilename=None,writePotentialOnly=writePotentialOnly,clipValues=True):
 
     #read gamer
     #mcoordinates, mcells, mmarkers,mvertmarkers= read_mcsf_file(mcsffilename)
@@ -378,7 +378,7 @@ def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
     #quit()
 
     # hack
-    if(csvfilename!="none"): 
+    if(csvfilename!=None):    
       mvalues = InterpolateAPBScsv(mesh,csvfilename)
     
     # correct way 
@@ -405,7 +405,7 @@ def convertAllAPBS(problem,apbsfilenames,skipAPBS=0,mgridloc=-1,\
      
     from view import plotslicegeneral
     range = get_range(mesh)
-    plotslicegeneral(mesh.coordinates(),mvalues,fileName="final.png",range=range)
+    #plotslicegeneral(mesh.coordinates(),mvalues,fileName="final.png",range=range)
     print "Final: Interpolated potential values [kT/e]: min (%e) max (%e) " % (min(mvalues),max(mvalues))
 
 
@@ -426,8 +426,8 @@ if __name__ == "__main__":
     apbsfilenames=[]       
     # ~/localTemp/NBCR/smol/gamer/p.pqr.output.out.m
     #mcsffilename = "example/molecule/p.pqr.output.out.m"
-    mcsffilename = "none"
-    csvfilename = "none"
+    mcsffilename = None   
+    csvfilename = None   
     mgridloc=[0,0,0] # location of molecular center within finite element mesh 
     mgridloc=-1      # location of molecular center within finite element mesh 
 
@@ -444,9 +444,9 @@ if __name__ == "__main__":
         meshfilename = sys.argv[i+1]
         #mcsffilename = meshfilename.replace("_mesh.xml.gz",".m")
         from dolfin import Mesh
-        problem.root = mcsffilename.replace("_mesh.xml.gz", "")
+        problem.root = meshfilename.replace("_mesh.xml.gz", "")
         problem.mesh = Mesh(meshfilename)
-        writePotentialOnly=1
+        writePotentialOnly=True
 
         
       if(sys.argv[i] == '-p'):
@@ -465,7 +465,7 @@ if __name__ == "__main__":
     if(len(apbsfilenames)==0 and csvfilename=='none'):
         raise RuntimeError("Must provide apbs electrostatic potential files. Otherwise use mcsftodolfin.py")
 
-    if(mcsffilename!="none"):
+    if(mcsffilename!=None):       
         problem.mesh= read_and_mark(mcsffilename)
 
 

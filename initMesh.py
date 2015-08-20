@@ -141,7 +141,7 @@ def SetBoundaries(
   # test
   File("subdoms.pvd") << subdomains
   File(problem.fileSubdomains) << problem.subdomains
-  noElectro=0
+  #noElectro=0
 
 
 
