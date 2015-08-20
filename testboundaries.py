@@ -38,9 +38,9 @@ def SercaTest():
   mesh = UnitCube(10,10,10)
   
   ## boundaries 
-  import SercaBoundary as bound
+  import SercaBoundary as boundary
   problem.mesh = mesh
-  problem.bound=bound
+  problem.boundary=boundary
 
   return (problem)
   
@@ -51,26 +51,26 @@ def SercaActual():
   mesh = Mesh(problem.fileMesh);
 
   ## boundaries 
-  import SercaBoundary as bound
+  import SercaBoundary as boundary
 
   # modify active site 
   # from test.m       12458    2     -1.4566563606e+01     3.3411479950e+01     2.7281160355e+01
-  #bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01,    2.7281160355e+01])
+  #boundary.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01,    2.7281160355e+01])
   # HACK 
-  #bound.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
-  #bound.activeSiteR   = 10.0
+  #boundary.activeSiteLoc = np.array([-1.4566563606e+01,    3.3411479950e+01, -150])
+  #boundary.activeSiteR   = 10.0
   
  
   # mody outer
   #         12000    2      2.0618418884e+02    -1.4678872681e+02     1.4827406311e+02
-  # NOT CORRECT? bound.topZ = 1.4827406311e+02
-  #bound.topZ = 10.0 
+  # NOT CORRECT? boundary.topZ = 1.4827406311e+02
+  #boundary.topZ = 10.0 
   #HACKS 
-  #bound.topZ = 0.0 
+  #boundary.topZ = 0.0 
 
 
   problem.mesh = mesh
-  problem.bound=bound
+  problem.boundary=boundary
 
   return (problem)
 
@@ -80,10 +80,10 @@ def TroponinTest():
   mesh = UnitCube(10,10,10)
   
   ## boundaries 
-  import TroponinBoundary as bound
+  import TroponinBoundary as boundary
 
   problem.mesh = mesh
-  problem.bound=bound
+  problem.boundary=boundary
 
   return (problem)
 
@@ -117,12 +117,12 @@ def TroponinActual():
 
 
   problem.mesh = mesh
-  problem.bound=troponinboundaries
+  problem.boundary=troponinboundaries
 
   return (problem)
 
 
-def TestBoundaries(mode):
+def TestBoundaries(mode=False,problem=False):
 
   if (mode=="sercatest"):
     problem = SercaTest()
@@ -132,17 +132,32 @@ def TestBoundaries(mode):
     problem = TroponinActual()
   elif (mode=="serca"):
     problem = SercaActual()
+  else:
+    if problem==False:
+      raise RuntimeError("problem object needs to be defined if mode==False") 
 
   # apply 
   mesh = problem.mesh
-  bound=problem.bound
+  boundary=problem.boundary
+ 
+  # if one of the defined modes
+  if mode!=False:
+    activeSite = boundary.ActiveSite()
+    bulkBoundary = boundary.BulkBoundary()
+    molecularBoundary = boundary.MolecularBoundary()
+    outName = mode
+  else:
+    activeSite = problem.boundary.activeSite
+    bulkBoundary = problem.boundary.bulkBoundary
+    molecularBoundary= problem.boundary.molecularBoundary
+    outName = "test"
+
 
   V = FunctionSpace(mesh, "Lagrange", 1)
   problem.V    = V
 
 
   # active site 
-  activeSite = bound.ActiveSite()
   bc0 = DirichletBC(V,Constant(1),activeSite)
   marked1 = Function(V)
   bc0.apply(marked1.vector())
@@ -151,14 +166,12 @@ def TestBoundaries(mode):
   
   
   # bulk        
-  bulkBoundary = bound.BulkBoundary()
   bc0 = DirichletBC(V,Constant(2),bulkBoundary)
   marked2 = Function(V)
   bc0.apply(marked2.vector())
   print "Bulk: (%d/%d)" % ( np.sum(marked2.vector().array())/2, nEle) 
   
   # molecular    
-  molecularBoundary = bound.MolecularBoundary()
   bc0 = DirichletBC(V,Constant(4),molecularBoundary)
   marked4 = Function(V)
   bc0.apply(marked4.vector())
@@ -167,7 +180,7 @@ def TestBoundaries(mode):
   marked = marked1
   marked.vector()[:]= marked1.vector()[:] + marked2.vector()[:] + marked4.vector()[:]
   #plot(marked,interactive=0)
-  File(mode+".pvd") << marked
+  File(outName+".pvd") << marked
 
 
 

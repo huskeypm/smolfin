@@ -34,9 +34,9 @@ from params import * # must do this for class
 class empty:pass
 
 class problem:
-  filePotential="none"
-  fileMesh="none"
-  fileSubdomains="none"
+  filePotential=None  
+  fileMesh=None  
+  fileSubdomains=None  
 
 parms  = params()
 problem = problem()
@@ -54,9 +54,10 @@ def CheckAreas(mesh):
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
 # V = can define alternative vector function space here instead of using one in 'problem'
-def ElectrostaticPMF(problem,psi,q="useparams",V="none"):
+def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
 
-    if(type(V) is str and V=="none"):
+    #if(type(V) is str and V==None):   
+    if(V==None):
       problem.pmf = Function(problem.V)
     else:
       problem.pmf = Function(V)
@@ -117,16 +118,16 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     #print dJdD
 
     # Compute area for comparison 
-    raise RuntimeError("PKH needs to rewrite assemble commands for compatibility with recent dolfin") 
-    subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker),
-                                mesh=problem.mesh,
-                                exterior_facet_domains = problem.subdomains)
+    #raise RuntimeError("PKH needs to rewrite assemble commands for compatibility with recent dolfin") 
+    subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker, domain=problem.mesh))
+                                #mesh=problem.mesh,
+                                #exterior_facet_domains = problem.subdomains)
     print "Subdomain has area of %f [A^2]" % subdomainArea
 
     # Boundary flux [Ang um^2/s], since mesh is in A 
     # see notetaker 2012-08-13
-    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker),
-                                exterior_facet_domains = problem.subdomains)
+    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker,domain=mesh))
+                                #exterior_facet_domains = problem.subdomains)
     # use -1, since I believe normals are printed INTO domain
     boundary_flux_terms *= -1 
     #print boundary_flux_terms, "[A um^2 /s]"
@@ -181,7 +182,8 @@ def LoadFiles(problem):
     problem.subdomains = MeshFunction("size_t", problem.mesh, problem.fileSubdomains)
 
 
-def ProblemDefinition(problem,boundaries=0):
+# boundaries False: use active site marker in mesh, else, use definitions inside boundaries object
+def ProblemDefinition(problem,boundaries=False):
   ## load data
   # coordinates
 #  if(os.path.exists(problem.fileMesh)==0):
@@ -204,11 +206,12 @@ def ProblemDefinition(problem,boundaries=0):
    
 
   # quick check
-  CheckAreas(mesh)
+  #CheckAreas(mesh)
 
   # Load and apply electrostatic potential values to mesh 
   V = FunctionSpace(mesh, "CG", 1)
-  if(problem.filePotential!="none"):
+  print problem.filePotential
+  if(problem.filePotential!=None):
     if(os.path.exists(problem.filePotential) == 0):
       msg = "filePotential %s does not exist" % problem.filePotential 
       raise RuntimeError(msg)
@@ -230,11 +233,13 @@ def ProblemDefinition(problem,boundaries=0):
 
 
   ## assign BC 
-  bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
-  bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
+  # assign BCs based on markers stored in subdomains file 
+  if boundaries==False:
+    bc0 = DirichletBC(V,Constant(parms.active_site_absorb),subdomains,parms.active_site_marker)
+    bc1 = DirichletBC(V,Constant(parms.bulk_conc),subdomains,parms.outer_boundary_marker)
 
   # override with definition 
-  if(boundaries!=0):
+  if(boundaries!=False):
     print "Overriding marked boundaries with user definition (test with testboundaries.py)"
     bc0 = DirichletBC(V,Constant(parms.active_site_absorb),boundaries.activeSite)
     bc1 = DirichletBC(V,Constant(parms.bulk_conc),boundaries.bulkBoundary)
@@ -477,7 +482,7 @@ if __name__ == "__main__":
     problem.filePotential= root+"_values.xml.gz"
     import os.path
     if(os.path.isfile(problem.filePotential)==0):
-       problem.filePotential= "none";
+       problem.filePotential= None      
        print "Didn't see electrostatic potential..."
 
     Run(problem)
