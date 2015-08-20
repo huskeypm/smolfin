@@ -99,13 +99,18 @@ def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
 # See eqn (4) of Notes
 # following example on pg 619
 # if sphere, validate against analytical result (see 111128_todo)
-def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVector=-1):
+def ComputeKon(problem,results,subdomainMarker=None,\
+               useSolutionVector=False,solutionVector=None):
     ## smol defaults
-    if(subdomainMarker==-1):
+    if(subdomainMarker==None):
       subdomainMarker = parms.active_site_marker
 
-    if(useSolutionVector==0):
+    if(useSolutionVector==False):
       solutionVector=results.up
+
+    # define markers
+    from dolfin import ds
+    ds = ds[problem.subdomains]
    
     # Need to know the spatial dimension to compute the shape of derivatives.
     # don't need to reproject Jp = project(D * intfact * grad(invintfact * up),Vv)
@@ -118,15 +123,15 @@ def ComputeKon(problem,results,subdomainMarker=-1,useSolutionVector=0,solutionVe
     #print dJdD
 
     # Compute area for comparison 
-    #raise RuntimeError("PKH needs to rewrite assemble commands for compatibility with recent dolfin") 
     subdomainArea = assemble(Constant(1.0)*ds(subdomainMarker, domain=problem.mesh))
-                                #mesh=problem.mesh,
-                                #exterior_facet_domains = problem.subdomains)
     print "Subdomain has area of %f [A^2]" % subdomainArea
 
     # Boundary flux [Ang um^2/s], since mesh is in A 
     # see notetaker 2012-08-13
-    boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker,domain=mesh))
+    n = FacetNormal(problem.mesh)
+    #boundary_flux_terms = assemble(dot(Jp, tetrahedron.n)*ds(subdomainMarker,domain=mesh))
+    #boundary_flux_terms = assemble(dot(Jp, n)*ds(subdomainMarker,domain=mesh))
+    boundary_flux_terms = assemble(dot(Jp, n)*ds(subdomainMarker))
                                 #exterior_facet_domains = problem.subdomains)
     # use -1, since I believe normals are printed INTO domain
     boundary_flux_terms *= -1 
