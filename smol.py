@@ -53,12 +53,14 @@ def CheckAreas(mesh):
 # PMF term in Smoluchowski equation
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
-# V = can define alternative vector function space here instead of using one in 'problem'
+# V = can define alternative vector function space here instead of using one in 'problem''(don't remember why this is needed') 
 def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
 
     #if(type(V) is str and V==None):   
-    if(V==None):
-      problem.pmf = Function(problem.V)
+    if(V is None):
+      #problem.pmf = Function(problem.V)
+      V = FunctionSpace(problem.mesh)
+      problem.pmf = Function(V)
     else:
       problem.pmf = Function(V)
 
