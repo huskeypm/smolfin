@@ -59,7 +59,7 @@ def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
     #if(type(V) is str and V==None):   
     if(V is None):
       #problem.pmf = Function(problem.V)
-      V = FunctionSpace(problem.mesh)
+      V = FunctionSpace(problem.mesh,"CG",1)
       problem.pmf = Function(V)
     else:
       problem.pmf = Function(V)
