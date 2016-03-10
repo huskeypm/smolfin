@@ -54,6 +54,7 @@ def CheckAreas(mesh):
 # F = del W(r)
 # [1]	Y. Song, Y. Zhang, T. Shen, C. L. Bajaj, J. A. McCammon, and N. A. Baker, Finite element solution of the steady-state Smoluchowski equation for rate constant calculations.
 # V = can define alternative vector function space here instead of using one in 'problem''(don't remember why this is needed') 
+# Essentially multiple electric potential by the diffuser charge 
 def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
 
     #if(type(V) is str and V==None):   
@@ -83,7 +84,7 @@ def ElectrostaticPMF(problem,psi,q="useparams",V=None  ):
     #dpmf = grad(pmf) # presumably this is differentiating wrt xyz (or see pg 309 in Dolfin manual)
 
     # get too small
-    THRESH=20
+    THRESH=1e9
     idx = (np.where(pmf < -THRESH))[0]
     if(np.size(idx)>0): 
       print "Encountered %d values with very small PMF values/consider thresholding" % np.size(idx)
